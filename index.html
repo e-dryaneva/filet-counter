@@ -94,7 +94,7 @@ input[type=range]{width:100%;accent-color:var(--rust)}
 label.file{position:relative;overflow:hidden}
 label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .cv-box{position:relative;width:100%;overflow:hidden;border-radius:14px;background:var(--sunk)}
-.cv-box canvas{display:block}
+.cv-box canvas{display:block;margin:0 auto;touch-action:none}
 .cv-box.selecting canvas{touch-action:none;cursor:crosshair}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .field{display:grid;gap:4px;min-width:0}
@@ -194,8 +194,8 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
           <div id="imgWork" hidden style="display:grid;gap:10px">
             <div class="status" id="detStatus"></div>
             <div class="cv-box" id="cvBox"><canvas id="srcCanvas"></canvas></div>
+            <p class="cap" style="text-align:left">Потяни за кружки в углах, чтобы рамка совпала с краями сетки. Рамку можно и передвинуть целиком.</p>
             <div class="row">
-              <button id="btnSelect" aria-pressed="false">Выделить сетку вручную</button>
               <button id="btnRedetect">Найти сетку заново</button>
               <label class="file btn">Другая картинка<input type="file" id="file2" accept="image/*"></label>
             </div>
@@ -687,7 +687,7 @@ const imp = { editId:null, mode:'img', img:null, W:0, H:0, bin:null, rect:null, 
 function openImport(editId){
   Object.assign(imp, { editId: editId || null, img:null, bin:null, rect:null, xs:[], ys:[], selecting:false });
   $('saveMsg').textContent = '';
-  $('btnSelect').setAttribute('aria-pressed','false'); $('cvBox').classList.remove('selecting');
+  frameDrag = null;
   if (editId && patterns.has(editId)){
     const p = patterns.get(editId);
     imp.cols = p.w; imp.rows = p.h; imp.cells = p.cells.map(r => [...r].map(ch => ch === '1' ? 1 : 0));
@@ -851,10 +851,10 @@ function runDetect(){
   const xs = findLines('x', R), ys = findLines('y', R);
   if (xs && ys && xs.length-1 <= 250 && ys.length-1 <= 300){
     imp.xs = xs; imp.ys = ys; imp.cols = xs.length-1; imp.rows = ys.length-1;
-    setStatus(`Нашла сетку: ${imp.cols} клеток в ряду и ${imp.rows} рядов. Сверь с оригиналом — если число не совпало, поправь его справа или выдели сетку вручную.`, false);
+    setStatus(`Нашла сетку: ${imp.cols} клеток в ряду и ${imp.rows} рядов. Сверь с оригиналом — если число не совпало, поправь его справа или подвинь углы рамки.`, false);
   } else {
     imp.xs = linspace(R.x0, R.x1, imp.cols+1); imp.ys = linspace(R.y0, R.y1, imp.rows+1);
-    setStatus('Сетку автоматически не нашла. Нажми «Выделить сетку вручную», обведи только клетки схемы и укажи, сколько клеток в ряду и рядов.', true);
+    setStatus('Сетку автоматически не нашла. Потяни за углы рамки, чтобы она охватывала только клетки схемы, и укажи справа, сколько клеток в ряду и рядов.', true);
   }
   syncCounts(); classify(); drawSrc(); drawEditor();
 }
@@ -878,64 +878,85 @@ $('sens').addEventListener('input', e => {
   if (imp.img){ classify(); drawSrc(); drawEditor(); }
 });
 
-let srcScale = 1, selDrag = null;
+let srcScale = 1, frameDrag = null;
+const HANDLE = 24;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function frame(){ return { x0: imp.xs[0], x1: imp.xs[imp.xs.length-1], y0: imp.ys[0], y1: imp.ys[imp.ys.length-1] }; }
 function drawSrc(){
-  if (!imp.img) return;
-  const box = $('cvBox'); const w = Math.max(200, box.clientWidth);
-  srcScale = w / imp.W; const h = Math.round(imp.H * srcScale);
+  if (!imp.img || !imp.xs.length) return;
+  const box = $('cvBox');
+  const maxW = Math.max(200, box.clientWidth);
+  const maxH = Math.max(260, Math.round(window.innerHeight*0.62));
+  srcScale = Math.min(maxW / imp.W, maxH / imp.H);
+  const w = Math.round(imp.W*srcScale), h = Math.round(imp.H*srcScale);
   const c = setupCanvas($('srcCanvas'), w, h), k = colors();
   c.drawImage(imp.img, 0, 0, w, h);
   const sx = v => v*srcScale;
-  c.fillStyle = k.rust; c.globalAlpha = 0.9;
-  for (let r=0;r<imp.rows;r++) for (let col=0;col<imp.cols;col++) if (imp.cells[r] && imp.cells[r][col]){
-    const cx = sx((imp.xs[col]+imp.xs[col+1])/2), cy = sx((imp.ys[r]+imp.ys[r+1])/2);
-    const rr = Math.max(1.5, Math.min(5, sx(imp.xs[col+1]-imp.xs[col])*0.2));
-    c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
+  if (!frameDrag){
+    c.fillStyle = k.rust; c.globalAlpha = 0.9;
+    for (let r=0;r<imp.rows;r++) for (let col=0;col<imp.cols;col++) if (imp.cells[r] && imp.cells[r][col]){
+      const cx = sx((imp.xs[col]+imp.xs[col+1])/2), cy = sx((imp.ys[r]+imp.ys[r+1])/2);
+      const rr = Math.max(1.5, Math.min(5, sx(imp.xs[col+1]-imp.xs[col])*0.2));
+      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
+    }
   }
+  const f = frame(), X0 = sx(f.x0), X1 = sx(f.x1), Y0 = sx(f.y0), Y1 = sx(f.y1);
   c.globalAlpha = 0.55; c.strokeStyle = k.rust; c.lineWidth = 1; c.beginPath();
-  const X0 = sx(imp.xs[0]), X1 = sx(imp.xs[imp.xs.length-1]), Y0 = sx(imp.ys[0]), Y1 = sx(imp.ys[imp.ys.length-1]);
   for (const x of imp.xs){ c.moveTo(sx(x), Y0); c.lineTo(sx(x), Y1); }
   for (const y of imp.ys){ c.moveTo(X0, sx(y)); c.lineTo(X1, sx(y)); }
   c.stroke(); c.globalAlpha = 1;
   c.lineWidth = 2.5; c.strokeRect(X0, Y0, X1-X0, Y1-Y0);
-  if (selDrag){ c.setLineDash([6,4]); c.strokeStyle = k.ink; c.lineWidth = 2; const a = selDrag; c.strokeRect(Math.min(a.x0,a.x1), Math.min(a.y0,a.y1), Math.abs(a.x1-a.x0), Math.abs(a.y1-a.y0)); c.setLineDash([]); }
+  for (const [x, y] of [[X0,Y0],[X1,Y0],[X0,Y1],[X1,Y1]]){
+    c.beginPath(); c.arc(x, y, 9, 0, Math.PI*2); c.fillStyle = k.card; c.fill();
+    c.lineWidth = 3; c.strokeStyle = k.rust; c.stroke();
+  }
 }
-function endSelectMode(){
-  imp.selecting = false; $('btnSelect').setAttribute('aria-pressed','false'); $('btnSelect').textContent = 'Выделить сетку вручную'; $('cvBox').classList.remove('selecting');
-}
-$('btnSelect').onclick = () => {
-  if (imp.selecting){ endSelectMode(); return; }
-  imp.selecting = true;
-  $('btnSelect').setAttribute('aria-pressed', 'true');
-  $('btnSelect').textContent = 'Обведи сетку на картинке…';
-  $('cvBox').classList.add('selecting');
-};
 const srcCv = $('srcCanvas');
+function srcPt(e){ const r = srcCv.getBoundingClientRect(); return { x:(e.clientX-r.left)/srcScale, y:(e.clientY-r.top)/srcScale }; }
+function hitFrame(p){
+  const f = frame(), tol = HANDLE/srcScale;
+  const corners = { tl:[f.x0,f.y0], tr:[f.x1,f.y0], bl:[f.x0,f.y1], br:[f.x1,f.y1] };
+  let mode = null, bd = Infinity;
+  for (const [key, [cx, cy]] of Object.entries(corners)){ const d = Math.hypot(p.x-cx, p.y-cy); if (d < tol && d < bd){ bd = d; mode = key; } }
+  if (!mode && p.x > f.x0 && p.x < f.x1 && p.y > f.y0 && p.y < f.y1) mode = 'move';
+  return mode;
+}
 srcCv.addEventListener('pointerdown', e => {
-  if (!imp.selecting) return;
-  const r = srcCv.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
-  selDrag = {x0:x, y0:y, x1:x, y1:y}; srcCv.setPointerCapture(e.pointerId); e.preventDefault();
+  if (!imp.img || !imp.xs.length) return;
+  const p = srcPt(e), mode = hitFrame(p);
+  if (!mode) return;
+  frameDrag = { mode, p0:p, f0:frame(), moved:false };
+  srcCv.setPointerCapture(e.pointerId); e.preventDefault();
 });
 srcCv.addEventListener('pointermove', e => {
-  if (!selDrag) return; const r = srcCv.getBoundingClientRect();
-  selDrag.x1 = Math.max(0, Math.min(r.width, e.clientX - r.left)); selDrag.y1 = Math.max(0, Math.min(r.height, e.clientY - r.top)); drawSrc();
+  if (!imp.img || !imp.xs.length) return;
+  const p = srcPt(e);
+  if (!frameDrag){ const m = hitFrame(p); srcCv.style.cursor = m === 'move' ? 'move' : m ? (m === 'tl' || m === 'br' ? 'nwse-resize' : 'nesw-resize') : 'default'; return; }
+  const { mode, p0, f0 } = frameDrag, dx = p.x-p0.x, dy = p.y-p0.y, min = 20;
+  const f = { ...f0 };
+  if (mode === 'move'){
+    const mx = clamp(dx, -f0.x0, imp.W - f0.x1), my = clamp(dy, -f0.y0, imp.H - f0.y1);
+    f.x0 += mx; f.x1 += mx; f.y0 += my; f.y1 += my;
+  } else {
+    if (mode[1] === 'l') f.x0 = clamp(f0.x0+dx, 0, f0.x1-min); else f.x1 = clamp(f0.x1+dx, f0.x0+min, imp.W);
+    if (mode[0] === 't') f.y0 = clamp(f0.y0+dy, 0, f0.y1-min); else f.y1 = clamp(f0.y1+dy, f0.y0+min, imp.H);
+  }
+  imp.xs = linspace(f.x0, f.x1, imp.cols+1); imp.ys = linspace(f.y0, f.y1, imp.rows+1);
+  frameDrag.moved = true;
+  drawSrc();
 });
-srcCv.addEventListener('pointerup', () => {
-  if (!selDrag) return; const a = selDrag; selDrag = null;
-  const x0 = Math.min(a.x0,a.x1)/srcScale, x1 = Math.max(a.x0,a.x1)/srcScale, y0 = Math.min(a.y0,a.y1)/srcScale, y1 = Math.max(a.y0,a.y1)/srcScale;
-  endSelectMode();
-  if (x1-x0 < 20 || y1-y0 < 20){ drawSrc(); return; }
-  imp.rect = {x0:Math.round(x0), y0:Math.round(y0), x1:Math.round(x1), y1:Math.round(y1)};
-  const R = imp.rect; const pad = Math.round(Math.min(x1-x0, y1-y0)*0.03);
-  const xs = findLines('x', {x0:Math.max(0,R.x0-pad), x1:Math.min(imp.W,R.x1+pad), y0:R.y0, y1:R.y1});
-  const ys = findLines('y', {x0:R.x0, x1:R.x1, y0:Math.max(0,R.y0-pad), y1:Math.min(imp.H,R.y1+pad)});
-  if (xs && ys){ imp.xs = xs; imp.ys = ys; imp.cols = xs.length-1; imp.rows = ys.length-1;
-    setStatus(`В выделенной области нашла ${imp.cols} × ${imp.rows} клеток. Если не совпадает с оригиналом, впиши точное число справа.`, false); }
-  else { imp.xs = linspace(R.x0, R.x1, imp.cols+1); imp.ys = linspace(R.y0, R.y1, imp.rows+1);
-    setStatus(`Разбила выделенную область на ${imp.cols} × ${imp.rows} клеток. Впиши точное число клеток в ряду и рядов из схемы.`, true); }
-  syncCounts(); classify(); drawSrc(); drawEditor();
-});
-srcCv.addEventListener('pointercancel', () => { selDrag = null; drawSrc(); });
+function endFrameDrag(){
+  if (!frameDrag) return;
+  const moved = frameDrag.moved; frameDrag = null;
+  if (moved){
+    const f = frame(); imp.rect = { x0:Math.round(f.x0), y0:Math.round(f.y0), x1:Math.round(f.x1), y1:Math.round(f.y1) };
+    classify(); drawEditor();
+    setStatus(`Рамка: ${imp.cols} × ${imp.rows} клеток. Если число не совпадает со схемой, впиши точное справа.`, false);
+  }
+  drawSrc();
+}
+srcCv.addEventListener('pointerup', endFrameDrag);
+srcCv.addEventListener('pointercancel', endFrameDrag);
 
 let edCell = 10, paintVal = null;
 function drawEditor(){
