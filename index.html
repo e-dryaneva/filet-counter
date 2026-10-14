@@ -111,8 +111,14 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .knit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
 @media (max-width:820px){.knit-grid{grid-template-columns:1fr}}
 .col{display:grid;gap:8px;min-width:0}
-.now{justify-items:center;text-align:center}
-.swatch{width:104px;height:104px;border-radius:14px;background:var(--cell);display:grid;place-items:center;outline:3px solid var(--ink);outline-offset:4px;margin-block:6px}
+.pos{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.posbig{font-family:var(--f-serif);font-weight:300;font-size:clamp(36px,9vw,50px);line-height:1}
+.posbig small{font-family:var(--f-serif);font-size:.42em;color:var(--muted);margin-left:4px}
+.dir{font-weight:600;padding:7px 12px;border-radius:999px;background:var(--sunk);font-size:14px;white-space:nowrap}
+.cellnow{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.cellnow .shout{text-align:left}
+.cellnum{font-family:var(--f-serif);font-style:italic;font-size:16px;color:var(--muted);margin-top:6px}
+.swatch{width:104px;height:104px;border-radius:14px;background:var(--cell);display:grid;place-items:center;outline:3px solid var(--ink);outline-offset:4px;margin:6px}
 .swatch::after{content:"";width:76%;height:76%;border-radius:10px;background:var(--rust);transform:scale(0)}
 .swatch.filled::after{transform:scale(1)}
 .swatch.done{outline-color:var(--ok);background:var(--sunk)}
@@ -235,18 +241,24 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
     </div>
     <div class="knit-grid">
       <div class="col" id="colNow">
-        <div class="card now">
-          <p class="cap" id="dirPill"></p>
-          <div class="swatch" id="swatch" aria-hidden="true"></div>
-          <p class="shout cellname" id="cellName"></p>
+        <div class="card">
+          <div class="pos">
+            <div class="posbig num" id="rowNum"></div>
+            <span class="dir" id="dirPill"></span>
+          </div>
+          <div class="cellnow">
+            <div class="swatch" id="swatch" aria-hidden="true"></div>
+            <div>
+              <div class="shout cellname" id="cellName"></div>
+              <div class="cellnum num" id="cellNum"></div>
+            </div>
+          </div>
           <div id="flash" class="flash" hidden></div>
           <p class="run" id="runText"></p>
-          <div class="tape-box" id="tapeBox"><canvas id="tapeCanvas"></canvas></div>
-          <p class="cap">дальше по ходу вязания</p>
-        </div>
-        <div class="tiles">
-          <div class="tile t-olive"><span class="cap">Ряд</span><span class="big num" id="tRow"></span></div>
-          <div class="tile t-sand"><span class="cap">Клетка</span><span class="big num" id="tCell"></span></div>
+          <div>
+            <p class="cap" style="text-align:left">дальше по ходу вязания</p>
+            <div class="tape-box" id="tapeBox" style="margin-top:8px"><canvas id="tapeCanvas"></canvas></div>
+          </div>
         </div>
       </div>
       <div class="col" id="colMap">
@@ -564,9 +576,9 @@ function renderKnit(){
   $('pctBar').style.width = (pos/total*100)+'%';
   $('btnBack').disabled = pos <= 0;
   if (pos >= total){
-    $('tRow').innerHTML = `${p.h}<small>/${p.h}</small>`;
-    $('tCell').innerHTML = `${p.w}<small>/${p.w}</small>`;
-    $('dirPill').textContent = 'Готово';
+    $('rowNum').textContent = 'Готово';
+    $('dirPill').textContent = `${p.h} из ${p.h} рядов`;
+    $('cellNum').textContent = `${total} клеток`;
     sw.className = 'swatch done';
     $('cellName').textContent = 'Схема провязана целиком';
     $('runText').textContent = 'Можно вернуться на шаг назад кнопкой ↶ или выбрать клетку на схеме.';
@@ -577,9 +589,9 @@ function renderKnit(){
   }
   $('btnDone').disabled = false;
   const c = cellAt(p, pos);
-  $('tRow').innerHTML = `${c.r}<small>/${p.h}</small>`;
-  $('tCell').innerHTML = `${c.s+1}<small>/${p.w}</small>`;
-  $('dirPill').textContent = `Ряд ${c.r} · ${rowRtl(p, c.r) ? '← справа налево' : 'слева направо →'}`;
+  $('rowNum').innerHTML = `Ряд ${c.r}<small>из ${p.h}</small>`;
+  $('dirPill').textContent = rowRtl(p, c.r) ? '← справа налево' : 'слева направо →';
+  $('cellNum').textContent = `клетка ${c.s+1} из ${p.w} в ряду`;
   sw.className = 'swatch ' + (c.v ? 'filled' : 'open');
   $('cellName').textContent = c.v ? 'Заполненная' : 'Пустая';
   const rowEnd = c.r*p.w;
