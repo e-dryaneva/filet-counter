@@ -185,8 +185,9 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
               <label class="file btn">Другая картинка<input type="file" id="file2" accept="image/*"></label>
             </div>
             <div class="field">
-              <label class="cap" for="sens">Порог «закрашено» — <span id="sensVal" class="num">50%</span></label>
+              <label class="cap" for="sens">Какие клетки считать заполненными<span id="sensVal" hidden></span></label>
               <input type="range" id="sens" min="15" max="85" value="50">
+              <div class="row" style="justify-content:space-between;font-size:13px"><span class="muted">даже бледные</span><span class="muted">только тёмные</span></div>
             </div>
           </div>
         </div>
