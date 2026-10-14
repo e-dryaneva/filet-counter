@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Филейный счётчик</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Yeseva+One&display=swap">
+<style>
+/* Layout: one-screen tool. Library → import/editor → knitting mode with a sticky thumb bar at the bottom. Charts drawn like printed filet charts: indigo ink on cotton-grey, madder red marks "you are here". */
+:root{
+  --bg:#E8EBEF; --surface:#FAFBFC; --sunk:#DCE0E7; --ink:#1D2240; --muted:#5B6280; --line:#C9CED9;
+  --accent:#C2402A; --accent-soft:#F6DDD7; --on-accent:#FFFFFF; --ok:#2C7A57;
+  --f-display:"Yeseva One", Georgia, "Times New Roman", serif;
+  --f-body:"Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11131D; --surface:#1A1D2B; --sunk:#232738; --ink:#E6E8F2; --muted:#9BA1BC; --line:#2F3449;
+  --accent:#F0694E; --accent-soft:#3A2220; --on-accent:#16080A; --ok:#5CC292; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#11131D; --surface:#1A1D2B; --sunk:#232738; --ink:#E6E8F2; --muted:#9BA1BC; --line:#2F3449;
+  --accent:#F0694E; --accent-soft:#3A2220; --on-accent:#16080A; --ok:#5CC292; color-scheme:dark }
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 24px}
+h1,h2{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:clamp(28px,6vw,40px);line-height:1.05}
+h2{font-size:22px}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+button,.btn{font:inherit;cursor:pointer;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,label.file:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+button.ghost{background:transparent;border-color:transparent;padding-inline:8px}
+button.danger{color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px;width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.top{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+
+/* Library */
+.lib-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-block:8px 20px}
+.lib-head p{max-width:46ch}
+.grid-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:84px 1fr;gap:14px;align-items:start;min-width:0}
+.card .thumb{width:84px;height:84px;background:var(--sunk);border-radius:8px;display:grid;place-items:center;cursor:pointer;border:0;padding:0;min-height:0}
+.card .info{min-width:0;display:grid;gap:6px}
+.card .name{font-weight:700;font-size:17px;overflow-wrap:anywhere;cursor:pointer;background:none;border:0;padding:0;min-height:0;text-align:left;justify-content:flex-start}
+.bar{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.card .acts{display:flex;gap:6px;flex-wrap:wrap}
+.card .acts button{min-height:36px;padding:6px 10px;font-size:14px}
+.empty{border:1.5px dashed var(--line);border-radius:14px;padding:28px 20px;display:grid;gap:14px;justify-items:start;background:var(--surface)}
+.note{font-size:13px;color:var(--muted);margin-top:18px}
+
+/* Import / editor */
+.imp-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;align-items:start;margin-top:16px}
+@media (max-width:820px){.imp-grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px;min-width:0}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:24px 16px;display:grid;gap:10px;justify-items:center;text-align:center;background:var(--sunk)}
+.drop.over{border-color:var(--accent)}
+label.file{position:relative;overflow:hidden}
+label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.cv-box{position:relative;width:100%;overflow:hidden;border-radius:8px;background:var(--sunk)}
+.cv-box canvas{display:block}
+.cv-box.selecting canvas{touch-action:none;cursor:crosshair}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:grid;gap:4px;min-width:0}
+.status{font-size:14px;padding:10px 12px;border-radius:8px;background:var(--sunk)}
+.status.warn{background:var(--accent-soft)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;min-height:40px;font-weight:500}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+#edCanvas{touch-action:none;display:block;margin:0 auto}
+.ed-box{overflow:auto;max-height:70vh;background:var(--sunk);border-radius:8px;padding:8px}
+
+/* Knit */
+#knit .wrap{padding-bottom:120px}
+.knit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:12px;align-items:start}
+@media (max-width:820px){.knit-grid{grid-template-columns:1fr}}
+.now{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:16px}
+.pos{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pos .big{font-family:var(--f-display);font-size:clamp(34px,8vw,48px);line-height:1}
+.pos .big small{font-family:var(--f-body);font-size:16px;color:var(--muted)}
+.dir{font-weight:600;padding:6px 12px;border-radius:999px;background:var(--sunk);font-size:14px;white-space:nowrap}
+.cellnow{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.swatch{width:112px;height:112px;border-radius:12px;border:4px solid var(--accent);position:relative;background:var(--surface)}
+.swatch.filled{background:var(--ink)}
+.swatch.open::after{content:"";position:absolute;inset:18px;border:3px solid var(--ink);border-radius:4px;opacity:.85}
+.swatch.done{border-color:var(--ok);background:var(--surface)}
+.cellname{font-family:var(--f-display);font-size:clamp(26px,6vw,34px);line-height:1.05}
+.cellnum{font-size:15px;color:var(--muted);margin-top:4px}
+.run{font-size:17px;line-height:1.4}
+.run b{font-weight:700}
+.tape-box{overflow:hidden}
+.flash{background:var(--ok);color:var(--surface);border-radius:10px;padding:10px 14px;font-weight:600}
+.map{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px;min-width:0}
+.map-box{overflow:auto;max-height:62vh;display:flex;justify-content:center}
+#mapCanvas{cursor:pointer}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid var(--line)}
+.thumbbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:5}
+.thumbbar .in{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:12px}
+#btnDone{min-height:72px;font-size:22px;border-radius:14px}
+#btnBack{min-height:72px;min-width:84px;border-radius:14px}
+.kbd{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+@media (pointer:coarse){.kbd{display:none}}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;display:flex;gap:12px;align-items:center;z-index:10;max-width:calc(100% - 32px);font-size:15px}
+.toast button{background:transparent;color:var(--bg);border-color:var(--muted);min-height:34px;padding:4px 10px}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+@media (prefers-reduced-motion:no-preference){ .swatch{transition:background .12s, border-color .12s} }
+</style>
+
+<section id="lib">
+  <div class="wrap">
+    <div class="lib-head">
+      <div style="display:grid;gap:8px">
+        <span class="label">Филейное вязание</span>
+        <h1>Мои схемы</h1>
+        <p class="muted">Загрузи картинку схемы, проверь распознанные клетки и вяжи: жми «Провязала», а я покажу, какая клетка следующая.</p>
+      </div>
+      <div class="row">
+        <button class="primary" id="btnNew">+ Добавить схему</button>
+      </div>
+    </div>
+    <div id="libList"><p class="muted">Загружаю схемы…</p></div>
+    <p class="note" id="storeNote"></p>
+  </div>
+</section>
+
+<section id="imp" hidden>
+  <div class="wrap">
+    <div class="top">
+      <button class="ghost" id="impBack">← Схемы</button>
+      <span class="label" id="impKicker">Новая схема</span>
+    </div>
+    <div class="imp-grid">
+      <div class="panel" id="srcPanel">
+        <div class="top"><h2>1. Картинка схемы</h2>
+          <div class="seg" role="group" aria-label="Источник">
+            <button id="srcImg" aria-pressed="true">Из картинки</button>
+            <button id="srcBlank" aria-pressed="false">Пустая сетка</button>
+          </div>
+        </div>
+        <div id="imgSide">
+          <div class="drop" id="drop">
+            <p><b>Перетащи картинку сюда</b> или выбери файл. Подойдёт скриншот или ровное фото схемы.</p>
+            <label class="file btn primary">Выбрать картинку<input type="file" id="file" accept="image/*"></label>
+            <p class="muted" style="font-size:13px">На компьютере можно вставить из буфера: Ctrl/⌘ + V</p>
+          </div>
+          <div id="imgWork" hidden style="display:grid;gap:10px">
+            <div class="status" id="detStatus"></div>
+            <div class="cv-box" id="cvBox"><canvas id="srcCanvas"></canvas></div>
+            <div class="row">
+              <button id="btnSelect" aria-pressed="false">Выделить сетку вручную</button>
+              <button id="btnRedetect">Найти сетку заново</button>
+              <label class="file btn">Другая картинка<input type="file" id="file2" accept="image/*"></label>
+            </div>
+            <div class="field">
+              <label class="label" for="sens">Порог «закрашено» — <span id="sensVal" class="mono">50%</span></label>
+              <input type="range" id="sens" min="15" max="85" value="50">
+            </div>
+          </div>
+        </div>
+        <div id="blankSide" hidden>
+          <p class="muted">Задай размер справа и закрась клетки касанием. Удобно для маленьких схем или чтобы перерисовать схему с бумаги.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>2. Проверь клетки</h2>
+        <div class="fields">
+          <div class="field"><label class="label" for="cols">Клеток в ряду</label><input type="number" id="cols" min="2" max="250" inputmode="numeric"></div>
+          <div class="field"><label class="label" for="rows">Рядов</label><input type="number" id="rows" min="2" max="300" inputmode="numeric"></div>
+        </div>
+        <p class="muted" style="font-size:14px">Касание клетки меняет «закрашена / пустая». Можно вести пальцем, чтобы закрасить сразу несколько.</p>
+        <div class="ed-box"><canvas id="edCanvas"></canvas></div>
+        <div class="row"><button id="btnInvert">Поменять закрашенные и пустые</button></div>
+        <div class="field"><label class="label" for="pname">Название</label><input type="text" id="pname" maxlength="80" placeholder="Например, Салфетка с розами"></div>
+        <div class="field"><span class="label">Первый ряд вяжу</span>
+          <div class="seg" role="group" aria-label="Направление первого ряда">
+            <button id="dirRtl" aria-pressed="true">← справа налево</button>
+            <button id="dirLtr" aria-pressed="false">слева направо →</button>
+          </div>
+          <p class="muted" style="font-size:13px">Дальше ряды чередуются. Ряд 1 — нижний ряд схемы.</p>
+        </div>
+        <div class="row"><button class="primary" id="btnSave">Сохранить и вязать</button><span id="saveMsg" class="muted" style="font-size:14px"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="knit" hidden>
+  <div class="wrap">
+    <div class="top">
+      <button class="ghost" id="knitBack">← Схемы</button>
+      <div class="row" style="gap:4px"><button class="ghost" id="knitEdit">Изменить схему</button></div>
+    </div>
+    <h1 id="knitTitle" style="font-size:clamp(24px,5vw,32px);margin-top:4px"></h1>
+    <div class="knit-grid">
+      <div class="now">
+        <div class="pos">
+          <div class="big mono" id="rowNum"></div>
+          <span class="dir" id="dirPill"></span>
+        </div>
+        <div class="cellnow">
+          <div class="swatch" id="swatch" aria-hidden="true"></div>
+          <div>
+            <div class="cellname" id="cellName"></div>
+            <div class="cellnum mono" id="cellNum"></div>
+          </div>
+        </div>
+        <div id="flash" class="flash" hidden></div>
+        <p class="run" id="runText"></p>
+        <div>
+          <span class="label">Дальше по ходу вязания</span>
+          <div class="tape-box" id="tapeBox" style="margin-top:8px"><canvas id="tapeCanvas"></canvas></div>
+        </div>
+      </div>
+      <div class="map">
+        <div class="top"><span class="label">Вся схема</span><span class="mono muted" id="pct"></span></div>
+        <div class="bar"><i id="pctBar" style="width:0"></i></div>
+        <div class="map-box" id="mapBox"><canvas id="mapCanvas"></canvas></div>
+        <div class="legend">
+          <span><i style="background:var(--ink)"></i>закрашенная</span>
+          <span><i style="background:var(--surface)"></i>пустая</span>
+          <span><i style="background:var(--accent)"></i>текущая</span>
+          <span>бледнее — уже провязано</span>
+        </div>
+        <p class="muted" style="font-size:13px">Коснись клетки на схеме, чтобы перейти к ней.</p>
+      </div>
+    </div>
+  </div>
+  <div class="thumbbar">
+    <div class="in">
+      <button id="btnBack" aria-label="Шаг назад">↶</button>
+      <button class="primary" id="btnDone">Провязала ✓</button>
+    </div>
+    <div class="kbd">Пробел или Enter — провязала · Backspace — назад</div>
+  </div>
+</section>
+
+<div class="toast" id="toast" hidden role="status"><span id="toastText"></span><button id="toastBtn" hidden></button></div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+function colors(){
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n).trim();
+  return { ink:g('--ink'), bg:g('--bg'), surface:g('--surface'), sunk:g('--sunk'), line:g('--line'), accent:g('--accent'), muted:g('--muted'), ok:g('--ok') };
+}
+function setupCanvas(cv, w, h){
+  const d = window.devicePixelRatio || 1;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.max(1, Math.round(w*d)); cv.height = Math.max(1, Math.round(h*d));
+  const c = cv.getContext('2d'); c.setTransform(d,0,0,d,0,0); return c;
+}
+function plural(n, one, few, many){
+  const a = Math.abs(n)%100, b = a%10;
+  if (a>10 && a<20) return many; if (b>1 && b<5) return few; if (b===1) return one; return many;
+}
+const typeWord = (v, n) => v ? plural(n,'заполненная','заполненные','заполненных') : plural(n,'пустая','пустые','пустых');
+const uid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(text, btnLabel, onBtn, ms=3500){
+  $('toastText').textContent = text;
+  const b = $('toastBtn');
+  if (btnLabel){ b.hidden = false; b.textContent = btnLabel; b.onclick = () => { $('toast').hidden = true; onBtn(); }; }
+  else b.hidden = true;
+  $('toast').hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, ms);
+}
+
+/* ---------- storage ---------- */
+const patterns = new Map();
+let store = null;
+const posPending = new Map(); // id -> {timer, inflight, value}
+
+function makeLocalStore(){
+  let cb = null;
+  const read = () => LS.get('filet.patterns', {});
+  const write = o => LS.set('filet.patterns', o);
+  return {
+    kind:'local',
+    subscribe(f){ cb = f; f(Object.entries(read()).map(([id,d]) => ({id, ...d}))); },
+    async save(p){ const o = read(); const {id, ...body} = p; o[id] = body; write(o); },
+    async updatePos(id, pos){ const o = read(); if (o[id]){ o[id].pos = pos; o[id].updatedAt = Date.now(); write(o); } },
+    async remove(id){ const o = read(); delete o[id]; write(o); cb && cb(Object.entries(o).map(([i,d]) => ({id:i, ...d}))); }
+  };
+}
+function makeDbStore(db, userId){
+  const col = db.collection('data/users/' + userId);
+  return {
+    kind:'db',
+    subscribe(f, onErr){ return col.onSnapshot(s => f(s.docs.map(d => ({id:d.id, ...d.data()}))), onErr); },
+    async save(p){ const {id, ...body} = p; await col.doc(id).set(body); },
+    async updatePos(id, pos){ await col.doc(id).update({pos, updatedAt: Date.now()}); },
+    async remove(id){ await col.doc(id).delete(); }
+  };
+}
+function onPatterns(list){
+  const seen = new Set();
+  for (const d of list){
+    if (!d || !Array.isArray(d.cells) || !d.w || !d.h) continue;
+    seen.add(d.id);
+    const local = patterns.get(d.id);
+    const pend = posPending.get(d.id);
+    const pat = {...d};
+    if (local && pend && (pend.timer || pend.inflight)) pat.pos = local.pos;
+    patterns.set(d.id, pat);
+  }
+  for (const id of [...patterns.keys()]) if (!seen.has(id)) patterns.delete(id);
+  renderLibrary();
+  if (screen === 'knit'){
+    if (!patterns.has(curId)) show('lib'); else renderKnit();
+  }
+  maybeResume();
+}
+function queuePos(id, pos){
+  let q = posPending.get(id); if (!q){ q = {}; posPending.set(id, q); }
+  q.value = pos;
+  clearTimeout(q.timer);
+  q.timer = setTimeout(() => { q.timer = null; flushPos(id); }, 700);
+}
+async function flushPos(id){
+  const q = posPending.get(id); if (!q || q.inflight) return;
+  const v = q.value; q.inflight = true;
+  try { await store.updatePos(id, v); }
+  catch(e){ toast('Не получилось сохранить прогресс. Проверь интернет — повторю при следующем шаге.'); }
+  q.inflight = false;
+  if (q.value !== v && !q.timer) flushPos(id);
+}
+async function initStore(){
+  let db = null, userId = null;
+  try {
+    if (window.claude && claude.use){
+      const [d, u] = await Promise.all([claude.use('db'), claude.use('user')]);
+      db = d; userId = u ? await u.id() : null;
+    }
+  } catch(e){ db = null; }
+  if (db && userId){
+    store = makeDbStore(db, userId);
+    $('storeNote').textContent = 'Схемы и прогресс сохраняются в твоём аккаунте — открой эту страницу на телефоне или компьютере и продолжай с той же клетки.';
+    store.subscribe(onPatterns, () => {
+      store = makeLocalStore();
+      $('storeNote').textContent = 'Синхронизация недоступна, схемы сохраняются только на этом устройстве.';
+      store.subscribe(onPatterns);
+    });
+  } else {
+    store = makeLocalStore();
+    $('storeNote').textContent = 'Синхронизация недоступна, схемы сохраняются только на этом устройстве.';
+    store.subscribe(onPatterns);
+  }
+}
+
+/* ---------- screens ---------- */
+let screen = 'lib', curId = null, resumed = false;
+function show(s){
+  screen = s;
+  $('lib').hidden = s !== 'lib'; $('imp').hidden = s !== 'imp'; $('knit').hidden = s !== 'knit';
+  if (s !== 'knit'){ LS.set('filet.last', null); releaseWake(); }
+  window.scrollTo(0,0);
+}
+function maybeResume(){
+  if (resumed) return; resumed = true;
+  const last = LS.get('filet.last', null);
+  if (last && patterns.has(last) && screen === 'lib') openKnit(last);
+}
+
+/* ---------- library ---------- */
+const EXAMPLE = [
+'.............',
+'..XXX...XXX..',
+'.XXXXX.XXXXX.',
+'.XXXXXXXXXXX.',
+'.XXXXXXXXXXX.',
+'..XXXXXXXXX..',
+'...XXXXXXX...',
+'....XXXXX....',
+'.....XXX.....',
+'......X......',
+'.............'];
+function drawThumb(cv, p, size){
+  const cell = Math.max(1, Math.floor(size / Math.max(p.w, p.h)));
+  const w = cell*p.w, h = cell*p.h;
+  const c = setupCanvas(cv, w, h), k = colors();
+  c.fillStyle = k.surface; c.fillRect(0,0,w,h);
+  c.fillStyle = k.ink;
+  for (let y=0;y<p.h;y++){ const r = p.cells[y]; for (let x=0;x<p.w;x++) if (r[x]==='1') c.fillRect(x*cell,y*cell,cell,cell); }
+}
+function renderLibrary(){
+  const box = $('libList'); box.textContent = '';
+  const list = [...patterns.values()].sort((a,b) => (b.updatedAt||0)-(a.updatedAt||0));
+  if (!list.length){
+    const e = document.createElement('div'); e.className = 'empty';
+    e.innerHTML = '<h2>Пока ни одной схемы</h2><p class="muted">Добавь картинку схемы — я найду сетку и разберу, какие клетки закрашены. Или открой пример с сердечком 13 × 11, чтобы попробовать режим вязания.</p>';
+    const r = document.createElement('div'); r.className = 'row';
+    const b1 = document.createElement('button'); b1.className = 'primary'; b1.textContent = '+ Добавить схему'; b1.onclick = () => openImport();
+    const b2 = document.createElement('button'); b2.textContent = 'Открыть пример'; b2.onclick = addExample;
+    r.append(b1, b2); e.append(r); box.append(e); return;
+  }
+  const g = document.createElement('div'); g.className = 'grid-list';
+  for (const p of list){
+    const total = p.w*p.h, pos = Math.min(p.pos||0, total);
+    const r = Math.min(p.h, Math.floor(pos/p.w)+1);
+    const card = document.createElement('div'); card.className = 'card';
+    const th = document.createElement('button'); th.className = 'thumb'; th.setAttribute('aria-label','Вязать «'+p.name+'»');
+    const cv = document.createElement('canvas'); th.append(cv); drawThumb(cv, p, 76);
+    th.onclick = () => openKnit(p.id);
+    const info = document.createElement('div'); info.className = 'info';
+    const nm = document.createElement('button'); nm.className = 'name'; nm.textContent = p.name || 'Без названия'; nm.onclick = () => openKnit(p.id);
+    const meta = document.createElement('div'); meta.className = 'mono muted'; meta.style.fontSize = '13px';
+    meta.textContent = pos >= total ? `Готово · ${p.w}×${p.h}` : `Ряд ${r} из ${p.h} · ${Math.round(pos/total*100)}% · ${p.w}×${p.h}`;
+    const bar = document.createElement('div'); bar.className = 'bar'; const bi = document.createElement('i'); bi.style.width = (pos/total*100)+'%'; bar.append(bi);
+    const acts = document.createElement('div'); acts.className = 'acts';
+    const bk = document.createElement('button'); bk.className = 'primary'; bk.textContent = pos ? 'Продолжить' : 'Начать'; bk.onclick = () => openKnit(p.id);
+    const be = document.createElement('button'); be.textContent = 'Изменить'; be.onclick = () => openImport(p.id);
+    const bd = document.createElement('button'); bd.className = 'danger'; bd.textContent = 'Удалить';
+    bd.onclick = () => {
+      acts.textContent = '';
+      const cf = document.createElement('div'); cf.className = 'confirm';
+      const t = document.createElement('span'); t.textContent = 'Удалить схему и прогресс?';
+      const yes = document.createElement('button'); yes.className = 'danger'; yes.textContent = 'Да, удалить';
+      yes.onclick = async () => { try{ await store.remove(p.id); patterns.delete(p.id); renderLibrary(); }catch(e){ toast('Не получилось удалить. Попробуй ещё раз.'); } };
+      const no = document.createElement('button'); no.textContent = 'Отмена'; no.onclick = renderLibrary;
+      cf.append(t, yes, no); acts.append(cf);
+    };
+    acts.append(bk, be, bd);
+    info.append(nm, meta, bar, acts);
+    card.append(th, info); g.append(card);
+  }
+  box.append(g);
+}
+async function addExample(){
+  const p = { id: uid(), name:'Пример: сердечко', w:13, h:11, cells: EXAMPLE.map(r => r.replace(/X/g,'1').replace(/\./g,'0')), pos:0, firstRtl:true, createdAt:Date.now(), updatedAt:Date.now() };
+  patterns.set(p.id, p);
+  try { await store.save(p); } catch(e){ toast('Не получилось сохранить пример.'); }
+  openKnit(p.id);
+}
+$('btnNew').onclick = () => openImport();
+
+/* ---------- knitting ---------- */
+const rowRtl = (p, r) => ((r % 2) === 1) === (p.firstRtl !== false);
+function cellAt(p, pos){
+  const r = Math.floor(pos/p.w)+1, s = pos % p.w;
+  const col = rowRtl(p, r) ? p.w-1-s : s, y = p.h - r;
+  return { r, s, col, y, v: p.cells[y][col] === '1' };
+}
+let wakeLock = null;
+async function requestWake(){
+  try { if (navigator.wakeLock && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch(e){ wakeLock = null; }
+}
+function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && screen === 'knit') requestWake(); });
+
+function openKnit(id){
+  if (!patterns.has(id)) return;
+  curId = id; show('knit'); LS.set('filet.last', id);
+  $('flash').hidden = true;
+  renderKnit(); requestWake();
+}
+function cur(){ return patterns.get(curId); }
+function setPos(pos, opts={}){
+  const p = cur(); if (!p) return;
+  const total = p.w*p.h; pos = Math.max(0, Math.min(total, pos));
+  if (pos === p.pos) return;
+  const prev = p.pos || 0;
+  p.pos = pos; p.updatedAt = Date.now();
+  queuePos(p.id, pos);
+  if (opts.step === 1 && pos % p.w === 0 && pos > 0){
+    const doneRow = pos / p.w;
+    const f = $('flash');
+    f.textContent = pos >= total ? 'Последний ряд готов — схема провязана целиком!' : `Ряд ${doneRow} готов. Поворачивай работу — ряд ${doneRow+1} идёт ${rowRtl(p, doneRow+1) ? 'справа налево ←' : 'слева направо →'}`;
+    f.hidden = false;
+    try{ navigator.vibrate && navigator.vibrate([60,60,60]); }catch(e){}
+  } else if (opts.step !== 1) $('flash').hidden = true;
+  else if (pos % p.w === 2) $('flash').hidden = true;
+  renderKnit();
+  return prev;
+}
+$('btnDone').onclick = () => { const p = cur(); if (p) setPos((p.pos||0)+1, {step:1}); };
+$('btnBack').onclick = () => { const p = cur(); if (p) setPos((p.pos||0)-1, {step:-1}); };
+$('knitBack').onclick = () => { show('lib'); renderLibrary(); };
+$('knitEdit').onclick = () => openImport(curId);
+document.addEventListener('keydown', e => {
+  if (screen !== 'knit') return;
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); $('btnDone').click(); }
+  else if (e.key === 'Backspace'){ e.preventDefault(); $('btnBack').click(); }
+});
+
+function renderKnit(){
+  const p = cur(); if (!p) return;
+  const total = p.w*p.h, pos = Math.min(p.pos||0, total);
+  $('knitTitle').textContent = p.name || 'Без названия';
+  const sw = $('swatch');
+  $('pct').textContent = `${pos} из ${total} клеток · ${Math.round(pos/total*100)}%`;
+  $('pctBar').style.width = (pos/total*100)+'%';
+  $('btnBack').disabled = pos <= 0;
+  if (pos >= total){
+    $('rowNum').innerHTML = 'Готово';
+    $('dirPill').textContent = `${p.h} из ${p.h} рядов`;
+    sw.className = 'swatch done';
+    $('cellName').textContent = 'Схема провязана';
+    $('cellNum').textContent = `${total} клеток`;
+    $('runText').textContent = 'Можно вернуться на шаг назад кнопкой ↶ или выбрать клетку на схеме.';
+    $('btnDone').disabled = true;
+    drawTape(p, pos); drawMap(p, pos); return;
+  }
+  $('btnDone').disabled = false;
+  const c = cellAt(p, pos);
+  $('rowNum').innerHTML = `Ряд ${c.r} <small>из ${p.h}</small>`;
+  $('dirPill').textContent = rowRtl(p, c.r) ? '← справа налево' : 'слева направо →';
+  sw.className = 'swatch ' + (c.v ? 'filled' : 'open');
+  $('cellName').textContent = c.v ? 'Заполненная' : 'Пустая';
+  $('cellNum').textContent = `клетка ${c.s+1} из ${p.w} в ряду`;
+  // runs within the row
+  const rowStart = (c.r-1)*p.w, rowEnd = rowStart + p.w;
+  let n = 0; while (pos+n < rowEnd && cellAt(p, pos+n).v === c.v) n++;
+  let m = 0; while (pos+n+m < rowEnd && cellAt(p, pos+n+m).v !== c.v) m++;
+  const left = rowEnd - pos;
+  let t = n === 1 ? `<b>Только эта одна</b> ${c.v ? 'заполненная' : 'пустая'}` : `<b>${n} ${typeWord(c.v, n)}</b> подряд, считая эту`;
+  if (m) t += `, потом <b>${m} ${typeWord(!c.v, m)}</b>`;
+  t += left === n ? '. Это конец ряда.' : `. До конца ряда ${left} ${plural(left,'клетка','клетки','клеток')}.`;
+  $('runText').innerHTML = t;
+  drawTape(p, pos); drawMap(p, pos);
+}
+
+function drawTape(p, pos){
+  const box = $('tapeBox'), cv = $('tapeCanvas');
+  const W = Math.max(200, box.clientWidth || 300);
+  const total = p.w*p.h;
+  const done = pos >= total;
+  const r = done ? p.h : Math.floor(pos/p.w)+1;
+  const rowStart = (r-1)*p.w, rowEnd = rowStart+p.w;
+  const from = Math.max(rowStart, pos-3), to = Math.min(rowEnd, done ? rowEnd : pos+12);
+  const cnt = to - from;
+  const S = Math.max(16, Math.min(40, Math.floor((W - 4) / 15)));
+  const H = S + 22;
+  const c = setupCanvas(cv, W, H), k = colors();
+  c.clearRect(0,0,W,H);
+  const rtl = rowRtl(p, r);
+  const gap = 3;
+  for (let i=0;i<cnt;i++){
+    const q = from + i; const cc = cellAt(p, q);
+    const x = rtl ? W - 2 - (i+1)*(S+gap) + gap : 2 + i*(S+gap);
+    const y = 4;
+    c.globalAlpha = q < pos ? 0.3 : 1;
+    c.fillStyle = cc.v ? k.ink : k.surface; c.fillRect(x, y, S, S);
+    c.strokeStyle = k.line; c.lineWidth = 1; c.strokeRect(x+.5, y+.5, S-1, S-1);
+    if (!cc.v){ c.strokeStyle = k.ink; c.lineWidth = 1.5; const i2 = Math.round(S*0.22); c.strokeRect(x+i2, y+i2, S-2*i2, S-2*i2); }
+    c.globalAlpha = 1;
+    if (q === pos){
+      c.strokeStyle = k.accent; c.lineWidth = 3; c.strokeRect(x-1.5, y-1.5, S+3, S+3);
+      c.fillStyle = k.accent; c.beginPath(); const cx = x+S/2; c.moveTo(cx, y+S+5); c.lineTo(cx-6, y+S+13); c.lineTo(cx+6, y+S+13); c.closePath(); c.fill();
+    }
+  }
+}
+
+let mapGeom = null;
+function drawMap(p, pos){
+  const box = $('mapBox'), cv = $('mapCanvas');
+  const maxW = Math.max(200, box.clientWidth - 4);
+  const gutter = 26;
+  let cell = Math.floor((maxW - gutter) / p.w);
+  cell = Math.max(3, Math.min(28, cell));
+  const W = gutter + cell*p.w, H = cell*p.h + 2;
+  const c = setupCanvas(cv, W, H), k = colors();
+  c.clearRect(0,0,W,H);
+  const ox = gutter, oy = 1;
+  c.fillStyle = k.surface; c.fillRect(ox, oy, cell*p.w, cell*p.h);
+  c.fillStyle = k.ink;
+  for (let y=0;y<p.h;y++){ const r = p.cells[y]; for (let x=0;x<p.w;x++) if (r[x]==='1') c.fillRect(ox+x*cell, oy+y*cell, cell, cell); }
+  if (cell >= 6){
+    c.strokeStyle = k.line; c.lineWidth = 1; c.beginPath();
+    for (let x=0;x<=p.w;x++){ const X = Math.round(ox+x*cell)+.5; c.moveTo(X, oy); c.lineTo(X, oy+cell*p.h); }
+    for (let y=0;y<=p.h;y++){ const Y = Math.round(oy+y*cell)+.5; c.moveTo(ox, Y); c.lineTo(ox+cell*p.w, Y); }
+    c.stroke();
+  }
+  // fade done cells
+  const total = p.w*p.h;
+  c.fillStyle = k.bg; c.globalAlpha = 0.62;
+  const fullRows = Math.min(p.h, Math.floor(pos / p.w));
+  if (fullRows) c.fillRect(ox, oy + (p.h-fullRows)*cell, cell*p.w, fullRows*cell);
+  if (pos < total){
+    const r = fullRows+1, s = pos % p.w, y = p.h - r;
+    if (s){ const rtl = rowRtl(p, r); const x0 = rtl ? p.w - s : 0; c.fillRect(ox + x0*cell, oy + y*cell, s*cell, cell); }
+  }
+  c.globalAlpha = 1;
+  // row numbers every 5
+  c.fillStyle = k.muted; c.font = `500 ${Math.min(11, Math.max(9, cell))}px "JetBrains Mono", monospace`; c.textAlign = 'right'; c.textBaseline = 'middle';
+  const every = cell >= 10 ? 5 : cell >= 5 ? 10 : 20;
+  for (let r=1;r<=p.h;r++) if (r===1 || r % every === 0) c.fillText(String(r), gutter-4, oy + (p.h-r)*cell + cell/2);
+  if (pos < total){
+    const cc = cellAt(p, pos);
+    c.strokeStyle = k.accent; c.lineWidth = Math.max(1.5, Math.min(2.5, cell/5));
+    c.strokeRect(ox+.5, oy + cc.y*cell + .5, cell*p.w - 1, cell - 1);
+    c.fillStyle = k.accent;
+    const pad = cell >= 8 ? 1 : 0;
+    c.fillRect(ox + cc.col*cell - pad, oy + cc.y*cell - pad, cell + 2*pad, cell + 2*pad);
+    if (cell >= 10 && !cc.v){ c.fillStyle = k.surface; const i2 = Math.round(cell*0.28); c.fillRect(ox + cc.col*cell + i2, oy + cc.y*cell + i2, cell - 2*i2, cell - 2*i2); }
+  }
+  mapGeom = { ox, oy, cell };
+  // keep current row visible
+  if (pos < total && box.scrollHeight > box.clientHeight){
+    const yPx = oy + cellAt(p,pos).y*cell;
+    if (yPx < box.scrollTop + 20 || yPx > box.scrollTop + box.clientHeight - 40) box.scrollTop = yPx - box.clientHeight/2;
+  }
+}
+$('mapCanvas').addEventListener('click', e => {
+  const p = cur(); if (!p || !mapGeom) return;
+  const rc = e.currentTarget.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rc.left - mapGeom.ox) / mapGeom.cell);
+  const y = Math.floor((e.clientY - rc.top - mapGeom.oy) / mapGeom.cell);
+  if (x < 0 || y < 0 || x >= p.w || y >= p.h) return;
+  const r = p.h - y, s = rowRtl(p, r) ? p.w-1-x : x;
+  const target = (r-1)*p.w + s;
+  const prev = p.pos || 0;
+  if (target === prev) return;
+  setPos(target, {step:0});
+  toast(`Перешла на ряд ${r}, клетку ${s+1}`, 'Отменить', () => setPos(prev, {step:0}));
+});
+
+/* ---------- import / editor ---------- */
+const imp = { editId:null, mode:'img', img:null, W:0, H:0, bin:null, dark:null, rect:null, xs:[], ys:[], cols:20, rows:20, cells:[], sens:0.5, firstRtl:true, selecting:false, detected:false };
+
+function openImport(editId){
+  Object.assign(imp, { editId: editId || null, img:null, bin:null, dark:null, rect:null, xs:[], ys:[], selecting:false, detected:false });
+  $('saveMsg').textContent = '';
+  $('btnSelect').setAttribute('aria-pressed','false'); $('cvBox').classList.remove('selecting');
+  if (editId && patterns.has(editId)){
+    const p = patterns.get(editId);
+    imp.cols = p.w; imp.rows = p.h; imp.cells = p.cells.map(r => [...r].map(ch => ch === '1' ? 1 : 0));
+    imp.firstRtl = p.firstRtl !== false;
+    $('pname').value = p.name || '';
+    $('impKicker').textContent = 'Изменение схемы';
+    setMode('blank');
+  } else {
+    imp.cols = 20; imp.rows = 20; imp.cells = blank(20, 20); imp.firstRtl = true;
+    $('pname').value = '';
+    $('impKicker').textContent = 'Новая схема';
+    setMode('img');
+    $('imgWork').hidden = true; $('drop').hidden = false;
+  }
+  syncDir(); syncCounts();
+  show('imp'); drawEditor();
+}
+$('impBack').onclick = () => { if (imp.editId && patterns.has(imp.editId)) openKnit(imp.editId); else { show('lib'); renderLibrary(); } };
+function blank(w, h){ return Array.from({length:h}, () => new Array(w).fill(0)); }
+function setMode(m){
+  imp.mode = m;
+  $('srcImg').setAttribute('aria-pressed', m === 'img'); $('srcBlank').setAttribute('aria-pressed', m === 'blank');
+  $('imgSide').hidden = m !== 'img'; $('blankSide').hidden = m !== 'blank';
+}
+$('srcImg').onclick = () => { setMode('img'); };
+$('srcBlank').onclick = () => { setMode('blank'); };
+function syncDir(){ $('dirRtl').setAttribute('aria-pressed', imp.firstRtl); $('dirLtr').setAttribute('aria-pressed', !imp.firstRtl); }
+$('dirRtl').onclick = () => { imp.firstRtl = true; syncDir(); };
+$('dirLtr').onclick = () => { imp.firstRtl = false; syncDir(); };
+function syncCounts(){ $('cols').value = imp.cols; $('rows').value = imp.rows; }
+
+function onCountsChange(){
+  const c = Math.max(2, Math.min(250, parseInt($('cols').value,10) || imp.cols));
+  const r = Math.max(2, Math.min(300, parseInt($('rows').value,10) || imp.rows));
+  if (c === imp.cols && r === imp.rows) return;
+  imp.cols = c; imp.rows = r;
+  if (imp.mode === 'img' && imp.img){
+    const x0 = imp.xs.length ? imp.xs[0] : imp.rect.x0, x1 = imp.xs.length ? imp.xs[imp.xs.length-1] : imp.rect.x1;
+    const y0 = imp.ys.length ? imp.ys[0] : imp.rect.y0, y1 = imp.ys.length ? imp.ys[imp.ys.length-1] : imp.rect.y1;
+    imp.xs = linspace(x0, x1, c+1); imp.ys = linspace(y0, y1, r+1);
+    classify(); drawSrc();
+    setStatus(`Сетка разбита на ${c} × ${r} клеток вручную.`, false);
+  } else {
+    const old = imp.cells; const n = blank(c, r);
+    for (let y=0;y<Math.min(r, old.length);y++) for (let x=0;x<Math.min(c, old[y].length);x++) n[y][x] = old[y][x];
+    imp.cells = n;
+  }
+  drawEditor();
+}
+$('cols').addEventListener('change', onCountsChange);
+$('rows').addEventListener('change', onCountsChange);
+const linspace = (a, b, n) => Array.from({length:n}, (_, i) => a + (b-a)*i/(n-1));
+
+/* image loading */
+function handleFile(file){
+  if (!file || !/^image\//.test(file.type)){ toast('Нужен файл-картинка: PNG, JPG или скриншот.'); return; }
+  const url = URL.createObjectURL(file);
+  const im = new Image();
+  im.onload = () => {
+    prepareImage(im);
+    URL.revokeObjectURL(url);
+    if (!$('pname').value) $('pname').value = (file.name || '').replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g,' ').slice(0,60);
+  };
+  im.onerror = () => toast('Не получилось открыть картинку. Попробуй другой файл.');
+  im.src = url;
+}
+$('file').addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+$('file2').addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+const drop = $('drop');
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) handleFile(f); });
+document.addEventListener('paste', e => {
+  if (screen !== 'imp') return;
+  const items = e.clipboardData ? [...e.clipboardData.items] : [];
+  const it = items.find(i => i.type && i.type.startsWith('image/'));
+  if (it){ setMode('img'); handleFile(it.getAsFile()); }
+});
+
+function prepareImage(im){
+  const sc = Math.min(1, 1400 / Math.max(im.naturalWidth, im.naturalHeight));
+  const W = Math.max(1, Math.round(im.naturalWidth*sc)), H = Math.max(1, Math.round(im.naturalHeight*sc));
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d', {willReadFrequently:true});
+  c.fillStyle = '#fff'; c.fillRect(0,0,W,H); c.drawImage(im, 0, 0, W, H);
+  const d = c.getImageData(0,0,W,H).data;
+  const dark = new Float32Array(W*H); const hist = new Uint32Array(256);
+  for (let i=0, j=0; i<W*H; i++, j+=4){
+    const l = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2];
+    const v = 255 - l; dark[i] = v/255; hist[Math.round(v)]++;
+  }
+  // Otsu
+  let sum=0; for (let t=0;t<256;t++) sum += t*hist[t];
+  let sumB=0, wB=0, best=0, thr=128; const tot = W*H;
+  for (let t=0;t<256;t++){ wB += hist[t]; if (!wB) continue; const wF = tot - wB; if (!wF) break; sumB += t*hist[t];
+    const mB = sumB/wB, mF = (sum-sumB)/wF; const between = wB*wF*(mB-mF)*(mB-mF); if (between > best){ best = between; thr = t; } }
+  thr = Math.max(thr, 40);
+  const bin = new Uint8Array(W*H); for (let i=0;i<W*H;i++) bin[i] = dark[i]*255 > thr ? 1 : 0;
+  Object.assign(imp, { img: cv, W, H, dark, bin, rect: {x0:0, y0:0, x1:W, y1:H}, mode:'img' });
+  $('drop').hidden = true; $('imgWork').hidden = false;
+  setMode('img');
+  runDetect();
+}
+
+/* grid detection: thin dark lines repeating with a steady period */
+function axisProfile(axis, R){
+  const {W, bin} = imp;
+  const n = axis === 'x' ? R.x1 - R.x0 : R.y1 - R.y0;
+  const m = axis === 'x' ? R.y1 - R.y0 : R.x1 - R.x0;
+  const p = new Float32Array(n);
+  if (axis === 'x'){ for (let y=R.y0;y<R.y1;y++){ const o = y*W; for (let i=0;i<n;i++) p[i] += bin[o + R.x0 + i]; } }
+  else { for (let i=0;i<n;i++){ const o = (R.y0+i)*W; let s=0; for (let x=R.x0;x<R.x1;x++) s += bin[o+x]; p[i] = s; } }
+  for (let i=0;i<n;i++) p[i] /= m;
+  return p;
+}
+function lineScore(p){
+  const n = p.length, s = new Float32Array(n);
+  for (let i=0;i<n;i++){
+    let mL = Infinity, mR = Infinity;
+    for (let k=2;k<=6;k++){ if (i-k >= 0) mL = Math.min(mL, p[i-k]); if (i+k < n) mR = Math.min(mR, p[i+k]); }
+    if (mL === Infinity) mL = mR; if (mR === Infinity) mR = mL;
+    s[i] = Math.max(0, p[i] - (mL + mR)/2);
+  }
+  return s;
+}
+function findLines(axis, R){
+  const s = lineScore(axisProfile(axis, R)); const n = s.length;
+  let maxS = 0; for (const v of s) maxS = Math.max(maxS, v);
+  if (maxS < 0.08) return null;
+  // period via autocorrelation
+  const maxL = Math.floor(n/3); if (maxL < 7) return null;
+  const ac = new Float64Array(maxL+1); let best = 0;
+  for (let L=5; L<=maxL; L++){ let a=0; for (let i=0;i+L<n;i++) a += s[i]*s[i+L]; ac[L] = a/(n-L); if (L >= 6 && ac[L] > best) best = ac[L]; }
+  let P = 0;
+  for (let L=6; L<maxL; L++) if (ac[L] >= 0.6*best && ac[L] >= ac[L-1] && ac[L] >= ac[L+1]){ P = L; break; }
+  if (!P) return null;
+  // peaks
+  const T = 0.18*maxS, peaks = [];
+  for (let i=1;i<n-1;i++) if (s[i] > T && s[i] >= s[i-1] && s[i] >= s[i+1] && (peaks.length === 0 || i - peaks[peaks.length-1] > 2)) peaks.push(i);
+  if (peaks.length < 3) return null;
+  const near = (target, tol) => { let b=-1, bd=Infinity; for (const q of peaks){ const d = Math.abs(q-target); if (d <= tol && d < bd){ bd = d; b = q; } } return b; };
+  // try chains from several strong peaks, keep longest
+  const order = [...peaks].sort((a,b) => s[b]-s[a]).slice(0, 8);
+  let bestChain = null;
+  for (const start of order){
+    const chain = [start];
+    for (const dir of [1, -1]){
+      let curP = P, last = start;
+      for (;;){
+        const t1 = last + dir*curP; let q = near(t1, curP*0.22);
+        if (q >= 0){ dir > 0 ? chain.push(q) : chain.unshift(q); curP = 0.7*curP + 0.3*Math.abs(q-last); last = q; continue; }
+        const t2 = last + 2*dir*curP; q = near(t2, curP*0.25);
+        if (q >= 0){ const mid = Math.round((last+q)/2); if (dir > 0) chain.push(mid, q); else chain.unshift(q, mid); curP = 0.7*curP + 0.3*Math.abs(q-last)/2; last = q; continue; }
+        break;
+      }
+    }
+    if (!bestChain || chain.length > bestChain.length) bestChain = chain;
+  }
+  if (!bestChain || bestChain.length < 3) return null;
+  const off = axis === 'x' ? R.x0 : R.y0;
+  return bestChain.map(v => v + off + 0.5);
+}
+function runDetect(){
+  const R = imp.rect;
+  const xs = findLines('x', R), ys = findLines('y', R);
+  if (xs && ys && xs.length-1 <= 250 && ys.length-1 <= 300){
+    imp.xs = xs; imp.ys = ys; imp.cols = xs.length-1; imp.rows = ys.length-1; imp.detected = true;
+    setStatus(`Нашла сетку: ${imp.cols} клеток в ряду и ${imp.rows} рядов. Сверь с оригиналом — если число не совпало, поправь его справа или выдели сетку вручную.`, false);
+  } else {
+    imp.detected = false;
+    const pad = 0;
+    imp.xs = linspace(R.x0+pad, R.x1-pad, imp.cols+1); imp.ys = linspace(R.y0+pad, R.y1-pad, imp.rows+1);
+    setStatus('Сетку автоматически не нашла. Нажми «Выделить сетку вручную», обведи пальцем или мышкой только клетки схемы и укажи справа, сколько клеток в ряду и рядов.', true);
+  }
+  syncCounts(); classify(); drawSrc(); drawEditor();
+}
+$('btnRedetect').onclick = () => { if (imp.img){ imp.rect = {x0:0, y0:0, x1:imp.W, y1:imp.H}; runDetect(); } };
+function setStatus(t, warn){ const s = $('detStatus'); s.textContent = t; s.classList.toggle('warn', !!warn); }
+function classify(){
+  const {xs, ys, bin, W} = imp; const cols = xs.length-1, rows = ys.length-1;
+  const cells = blank(cols, rows);
+  for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
+    const x0 = xs[c], x1 = xs[c+1], y0 = ys[r], y1 = ys[r+1];
+    const ix0 = Math.round(x0 + (x1-x0)*0.25), ix1 = Math.round(x1 - (x1-x0)*0.25);
+    const iy0 = Math.round(y0 + (y1-y0)*0.25), iy1 = Math.round(y1 - (y1-y0)*0.25);
+    let s=0, n=0;
+    for (let y=Math.max(0,iy0); y<=Math.min(imp.H-1,iy1); y++) for (let x=Math.max(0,ix0); x<=Math.min(W-1,ix1); x++){ s += bin[y*W+x]; n++; }
+    cells[r][c] = n && s/n > imp.sens ? 1 : 0;
+  }
+  imp.cells = cells; imp.cols = cols; imp.rows = rows;
+}
+$('sens').addEventListener('input', e => {
+  imp.sens = (+e.target.value)/100; $('sensVal').textContent = e.target.value + '%';
+  if (imp.img){ classify(); drawSrc(); drawEditor(); }
+});
+
+let srcScale = 1;
+function drawSrc(){
+  if (!imp.img) return;
+  const box = $('cvBox'); const w = Math.max(200, box.clientWidth);
+  srcScale = w / imp.W; const h = Math.round(imp.H * srcScale);
+  const cv = $('srcCanvas'); const c = setupCanvas(cv, w, h), k = colors();
+  c.imageSmoothingEnabled = true;
+  c.drawImage(imp.img, 0, 0, w, h);
+  const sx = v => v*srcScale;
+  // filled markers
+  c.fillStyle = k.accent; c.globalAlpha = 0.85;
+  for (let r=0;r<imp.rows;r++) for (let col=0;col<imp.cols;col++) if (imp.cells[r] && imp.cells[r][col]){
+    const cx = sx((imp.xs[col]+imp.xs[col+1])/2), cy = sx((imp.ys[r]+imp.ys[r+1])/2);
+    const rr = Math.max(1.5, Math.min(5, sx(imp.xs[col+1]-imp.xs[col])*0.18));
+    c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI*2); c.fill();
+  }
+  c.globalAlpha = 1;
+  // grid lines
+  c.strokeStyle = k.accent; c.lineWidth = 1; c.globalAlpha = 0.55; c.beginPath();
+  const X0 = sx(imp.xs[0]), X1 = sx(imp.xs[imp.xs.length-1]), Y0 = sx(imp.ys[0]), Y1 = sx(imp.ys[imp.ys.length-1]);
+  for (const x of imp.xs){ c.moveTo(sx(x), Y0); c.lineTo(sx(x), Y1); }
+  for (const y of imp.ys){ c.moveTo(X0, sx(y)); c.lineTo(X1, sx(y)); }
+  c.stroke(); c.globalAlpha = 1;
+  c.lineWidth = 2.5; c.strokeRect(X0, Y0, X1-X0, Y1-Y0);
+  if (selDrag){ c.setLineDash([6,4]); c.strokeStyle = k.ink; c.lineWidth = 2; const a = selDrag; c.strokeRect(Math.min(a.x0,a.x1), Math.min(a.y0,a.y1), Math.abs(a.x1-a.x0), Math.abs(a.y1-a.y0)); c.setLineDash([]); }
+}
+let selDrag = null;
+$('btnSelect').onclick = () => {
+  imp.selecting = !imp.selecting;
+  $('btnSelect').setAttribute('aria-pressed', imp.selecting);
+  $('btnSelect').textContent = imp.selecting ? 'Обведи сетку на картинке…' : 'Выделить сетку вручную';
+  $('cvBox').classList.toggle('selecting', imp.selecting);
+};
+const srcCv = $('srcCanvas');
+srcCv.addEventListener('pointerdown', e => {
+  if (!imp.selecting) return;
+  const r = srcCv.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+  selDrag = {x0:x, y0:y, x1:x, y1:y}; srcCv.setPointerCapture(e.pointerId); e.preventDefault();
+});
+srcCv.addEventListener('pointermove', e => {
+  if (!selDrag) return; const r = srcCv.getBoundingClientRect();
+  selDrag.x1 = Math.max(0, Math.min(r.width, e.clientX - r.left)); selDrag.y1 = Math.max(0, Math.min(r.height, e.clientY - r.top)); drawSrc();
+});
+srcCv.addEventListener('pointerup', () => {
+  if (!selDrag) return; const a = selDrag; selDrag = null;
+  const x0 = Math.min(a.x0,a.x1)/srcScale, x1 = Math.max(a.x0,a.x1)/srcScale, y0 = Math.min(a.y0,a.y1)/srcScale, y1 = Math.max(a.y0,a.y1)/srcScale;
+  imp.selecting = false; $('btnSelect').setAttribute('aria-pressed','false'); $('btnSelect').textContent = 'Выделить сетку вручную'; $('cvBox').classList.remove('selecting');
+  if (x1-x0 < 20 || y1-y0 < 20){ drawSrc(); return; }
+  imp.rect = {x0:Math.round(x0), y0:Math.round(y0), x1:Math.round(x1), y1:Math.round(y1)};
+  // try detection inside; otherwise split evenly using the entered counts
+  const R = imp.rect; const pad = Math.round(Math.min(x1-x0, y1-y0)*0.03);
+  const xs = findLines('x', {x0:Math.max(0,R.x0-pad), x1:Math.min(imp.W,R.x1+pad), y0:R.y0, y1:R.y1});
+  const ys = findLines('y', {x0:R.x0, x1:R.x1, y0:Math.max(0,R.y0-pad), y1:Math.min(imp.H,R.y1+pad)});
+  if (xs && ys){ imp.xs = xs; imp.ys = ys; imp.cols = xs.length-1; imp.rows = ys.length-1;
+    setStatus(`В выделенной области нашла ${imp.cols} × ${imp.rows} клеток. Если не совпадает с оригиналом, впиши точное число справа.`, false); }
+  else { imp.xs = linspace(R.x0, R.x1, imp.cols+1); imp.ys = linspace(R.y0, R.y1, imp.rows+1);
+    setStatus(`Разбила выделенную область на ${imp.cols} × ${imp.rows} клеток. Впиши справа точное число клеток в ряду и рядов из схемы.`, true); }
+  syncCounts(); classify(); drawSrc(); drawEditor();
+});
+srcCv.addEventListener('pointercancel', () => { selDrag = null; drawSrc(); });
+
+/* editor */
+let edCell = 10, paintVal = null;
+function drawEditor(){
+  const box = document.querySelector('.ed-box'); const avail = Math.max(200, box.clientWidth - 16);
+  edCell = Math.max(8, Math.min(28, Math.floor(avail / imp.cols)));
+  const w = edCell*imp.cols + 1, h = edCell*imp.rows + 1;
+  const c = setupCanvas($('edCanvas'), w, h), k = colors();
+  c.fillStyle = k.surface; c.fillRect(0,0,w,h);
+  c.fillStyle = k.ink;
+  for (let y=0;y<imp.rows;y++) for (let x=0;x<imp.cols;x++) if (imp.cells[y] && imp.cells[y][x]) c.fillRect(x*edCell, y*edCell, edCell, edCell);
+  c.strokeStyle = k.line; c.lineWidth = 1; c.beginPath();
+  for (let x=0;x<=imp.cols;x++){ c.moveTo(x*edCell+.5, 0); c.lineTo(x*edCell+.5, h); }
+  for (let y=0;y<=imp.rows;y++){ c.moveTo(0, y*edCell+.5); c.lineTo(w, y*edCell+.5); }
+  c.stroke();
+  c.strokeStyle = k.muted; c.beginPath();
+  for (let x=10;x<imp.cols;x+=10){ c.moveTo(x*edCell+.5, 0); c.lineTo(x*edCell+.5, h); }
+  for (let y=imp.rows-10;y>0;y-=10){ c.moveTo(0, y*edCell+.5); c.lineTo(w, y*edCell+.5); }
+  c.stroke();
+}
+const edCv = $('edCanvas');
+function edHit(e){ const r = edCv.getBoundingClientRect(); return { x: Math.floor((e.clientX - r.left)/edCell), y: Math.floor((e.clientY - r.top)/edCell) }; }
+edCv.addEventListener('pointerdown', e => {
+  const {x,y} = edHit(e); if (x<0||y<0||x>=imp.cols||y>=imp.rows) return;
+  paintVal = imp.cells[y][x] ? 0 : 1; imp.cells[y][x] = paintVal; edCv.setPointerCapture(e.pointerId); drawEditor(); e.preventDefault();
+});
+edCv.addEventListener('pointermove', e => {
+  if (paintVal == null) return; const {x,y} = edHit(e); if (x<0||y<0||x>=imp.cols||y>=imp.rows) return;
+  if (imp.cells[y][x] !== paintVal){ imp.cells[y][x] = paintVal; drawEditor(); }
+});
+['pointerup','pointercancel'].forEach(t => edCv.addEventListener(t, () => { paintVal = null; }));
+$('btnInvert').onclick = () => { imp.cells = imp.cells.map(r => r.map(v => v ? 0 : 1)); drawEditor(); };
+
+$('btnSave').onclick = async () => {
+  const name = $('pname').value.trim() || 'Схема ' + new Date().toLocaleDateString('ru-RU');
+  const cells = imp.cells.map(r => r.map(v => v ? '1' : '0').join(''));
+  const old = imp.editId ? patterns.get(imp.editId) : null;
+  const total = imp.cols*imp.rows;
+  const p = { id: old ? old.id : uid(), name, w: imp.cols, h: imp.rows, cells, firstRtl: imp.firstRtl,
+    pos: old ? Math.min(old.pos||0, total) : 0, createdAt: old ? (old.createdAt||Date.now()) : Date.now(), updatedAt: Date.now() };
+  if (!store){ $('saveMsg').textContent = 'Ещё подключаюсь к хранилищу — нажми через пару секунд.'; return; }
+  $('btnSave').disabled = true; $('saveMsg').textContent = 'Сохраняю…';
+  try { await store.save(p); patterns.set(p.id, p); $('saveMsg').textContent = ''; openKnit(p.id); }
+  catch(e){ $('saveMsg').textContent = e && e.code === 'quota_exceeded' ? 'Место закончилось: удали старые схемы и попробуй снова.' : 'Не получилось сохранить. Проверь интернет и нажми ещё раз.'; }
+  $('btnSave').disabled = false;
+};
+
+/* redraw on resize / theme */
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(redraw, 120); });
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw); } catch(e){}
+new MutationObserver(redraw).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+function redraw(){ if (screen === 'knit') renderKnit(); else if (screen === 'imp'){ drawSrc(); drawEditor(); } else renderLibrary(); }
+
+initStore();
+})();
+</script>
+
+</body>
+</html>
