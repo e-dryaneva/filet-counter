@@ -108,8 +108,17 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 
 /* Knit */
 #knit .wrap{padding-bottom:128px}
-.knit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
-@media (max-width:820px){.knit-grid{grid-template-columns:1fr}}
+.knit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start;margin-top:16px}
+@media (max-width:820px){
+  .knit-grid{grid-template-columns:1fr;gap:8px;margin-top:10px}
+  #knit .card{padding:14px;gap:10px}
+  #knit .swatch{width:72px;height:72px;outline-width:2.5px;outline-offset:3px}
+  #knit .posbig{font-size:34px}
+  #knit .cellname{font-size:21px}
+  #knit .run{font-size:15px}
+  #knit .map-box{max-height:42vh}
+  #knit .legend{font-size:12px;gap:10px}
+}
 .col{display:grid;gap:8px;min-width:0}
 .pos{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .posbig{font-family:var(--f-serif);font-weight:300;font-size:clamp(36px,9vw,50px);line-height:1}
@@ -235,10 +244,6 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
       </div>
       <span class="here" id="knitTitle"></span>
     </nav>
-    <div class="tabs" role="tablist" aria-label="Режим">
-      <button id="tabNow" class="on" aria-pressed="true">Сейчас</button>
-      <button id="tabMap" aria-pressed="false">Вся схема</button>
-    </div>
     <div class="knit-grid">
       <div class="col" id="colNow">
         <div class="card">
@@ -519,19 +524,9 @@ async function requestWake(){
 function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && screen === 'knit') requestWake(); });
 
-/* on phones the two columns become tabs; on wide screens both show and the tabs just scroll */
-const narrow = () => matchMedia('(max-width:820px)').matches;
+/* counter and whole chart always share one screen: side by side when wide, stacked on phones */
 let knitTab = 'now';
-function setKnitTab(t){
-  knitTab = t;
-  $('tabNow').classList.toggle('on', t === 'now'); $('tabMap').classList.toggle('on', t === 'map');
-  $('tabNow').setAttribute('aria-pressed', t === 'now'); $('tabMap').setAttribute('aria-pressed', t === 'map');
-  if (narrow()){ $('colNow').hidden = t !== 'now'; $('colMap').hidden = t !== 'map'; }
-  else { $('colNow').hidden = false; $('colMap').hidden = false; }
-  renderKnit();
-}
-$('tabNow').onclick = () => setKnitTab('now');
-$('tabMap').onclick = () => setKnitTab('map');
+function setKnitTab(){ renderKnit(); }
 
 function openKnit(id){
   if (!patterns.has(id)) return;
