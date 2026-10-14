@@ -28,6 +28,7 @@
   --bg:#161513; --card:#22201E; --sunk:#2A2825; --ink:#EFECE7; --muted:#9C978F; --line:#36332F;
   --cell:#2B3645; --seam:#22201E; --rust:#D2683F; --olive:#8F8A52; --sand:#D9BF82; --on-tile:#1A1815; --on-rust:#1B0E08; --ok:#9DBB6E; color-scheme:dark }
 
+*,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
 .wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 28px}
@@ -135,7 +136,7 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .run{font-size:16px;line-height:1.45;max-width:36ch;color:var(--ink)}
 .run b{font-weight:700}
 .tape-box{overflow:hidden;width:100%}
-.flash{background:var(--olive);color:var(--on-tile);border-radius:14px;padding:10px 14px;font-weight:600;font-size:15px;width:100%}
+.flash{background:var(--olive);color:var(--on-tile);border-radius:14px;padding:10px 14px;font-weight:600;font-size:15px}
 .map-box{overflow:auto;max-height:62vh;display:flex;justify-content:center}
 #mapCanvas{cursor:pointer}
 .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font-size:13px;color:var(--muted)}
