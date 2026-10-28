@@ -69,22 +69,63 @@ input[type=range]{width:100%;accent-color:var(--rust)}
 .tile .big small{font-size:.42em;opacity:.7;margin-left:4px}
 .t-olive{background:var(--olive)} .t-sand{background:var(--sand)} .t-white{background:var(--card);color:var(--ink)}
 
-/* Library */
-.lib-intro{max-width:44ch;color:var(--muted);margin-bottom:18px}
-.grid-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
-.pcard{background:var(--card);border-radius:var(--r-card);padding:14px;display:grid;gap:12px;min-width:0}
-.pcard .thumb{background:var(--sunk);border-radius:16px;display:grid;place-items:center;padding:14px;cursor:pointer;min-height:150px}
-.pcard .name{font-family:var(--f-serif);font-size:20px;line-height:1.2;overflow-wrap:anywhere;background:none;padding:0;min-height:0;text-align:left;justify-content:flex-start;font-weight:400}
-.pcard .meta{font-size:13px;color:var(--muted)}
+/* Library: pattern sheets with quiet, editorial captions. */
+.lib-heading{display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin:56px 0 38px}
+.lib-heading h1{font-size:clamp(34px,6vw,48px);line-height:1.2}
+.lib-heading p{color:var(--muted);margin-top:12px;font-size:14px}
+#lib #btnNew{background:transparent;color:var(--ink);font-family:var(--f-serif);font-weight:400;font-size:18px;padding:8px 0;border-radius:3px;white-space:nowrap}
+#lib #btnNew:hover{text-decoration:underline;text-underline-offset:6px}
+.library-section{font-size:28px;margin:44px 0 24px}
+.album-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
+.album-toolbar p{font-family:var(--f-serif);font-style:italic;color:var(--muted);font-size:14px}
+.album-controls{display:flex;align-items:center;gap:8px}
+.album-controls button{background:transparent;border:1px solid var(--line);border-radius:50%;width:44px;padding:0;font-size:20px;font-weight:400}
+.album-count{font-size:12px;color:var(--muted);min-width:52px;text-align:center}
+.album-track{display:flex;gap:28px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:24px 16px 180px;margin:0 -16px -152px;overscroll-behavior-x:contain;scrollbar-width:none;align-items:flex-start}
+.album-track::-webkit-scrollbar{display:none}
+.album-track:focus-visible{outline:2px solid var(--rust);outline-offset:-2px;border-radius:16px}
+.pcard{flex:0 0 320px;width:320px;min-width:0;scroll-snap-align:start;display:flex;flex-direction:column;gap:10px;position:relative}
+.pcard .thumb{position:relative;isolation:isolate;background:transparent;border-radius:18px;display:block;padding:0;height:330px;min-height:330px;width:100%;overflow:visible;filter:none}
+.pattern-sheet{position:absolute;inset:12px 26px 30px;display:flex;flex-direction:column;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:18px 16px 30px;box-shadow:0 8px 20px #0000000d;transform:rotate(-3deg);overflow:hidden}
+.pcard:nth-child(even) .pattern-sheet{transform:rotate(3deg)}
+.sheet-top{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:9px;font-weight:400;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pattern-art{display:flex;align-items:center;justify-content:center;flex:1;min-height:0;width:100%;overflow:hidden}
+.pattern-art canvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.pattern-pocket{position:absolute;inset:164px 4px 0;z-index:1;border:1px solid var(--line);border-top-color:var(--card);border-radius:12px 12px 22px 22px;background:color-mix(in srgb,var(--card) 76%,transparent);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);box-shadow:0 6px 12px #00000006;display:flex;align-items:flex-end;justify-content:space-between;padding:24px;color:var(--ink)}
+.pattern-pocket::after{content:'';position:absolute;inset:8px;border:1px dashed var(--line);border-top:0;border-radius:6px 6px 16px 16px;pointer-events:none}
+.pocket-info{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;min-width:0;position:relative;z-index:1;padding-right:38px}
+.pocket-title{font-family:var(--f-serif);font-size:25px;font-weight:400;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.pocket-meta{font-size:12px;font-weight:400;color:var(--muted)}
+.pocket-info .bar{height:2px;margin-top:3px;width:100%}
+.pocket-actions{position:absolute;right:15px;bottom:17px;z-index:3}
+.pocket-actions.confirming{left:12px;right:12px;bottom:12px;background:var(--card);padding:14px;border:1px solid var(--line);border-radius:14px}
 .bar{height:6px;background:var(--cell);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--rust);border-radius:3px}
-.pcard .acts{display:flex;gap:6px;flex-wrap:wrap}
-.pcard .acts button{min-height:38px;padding:6px 12px;font-size:14px}
-.empty{background:var(--card);border-radius:var(--r-card);padding:28px 22px;display:grid;gap:16px;justify-items:center;text-align:center}
-.empty .shout{font-size:clamp(17px,4.4vw,22px);max-width:28ch}
-.demo-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;width:min(280px,100%)}
+.pattern-menu{position:relative;margin-left:auto}
+.pattern-menu summary{list-style:none;cursor:pointer;border-radius:12px;padding:10px 14px;min-height:44px;background:transparent;font-weight:700}
+.pattern-menu summary::-webkit-details-marker{display:none}
+.pattern-menu summary:focus-visible{outline:2px solid var(--rust);outline-offset:3px}
+.pattern-menu[open]{z-index:2}
+.pattern-menu .menu-items{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);padding:8px;border:1px solid var(--line);box-shadow:0 8px 24px #0002;border-radius:14px;min-width:170px;display:grid;gap:4px}
+.empty{background:var(--card);border-radius:8px 36px 8px 8px;padding:36px 24px;display:grid;gap:24px;justify-items:center;text-align:center}
+.empty .shout{font-family:var(--f-serif);font-size:clamp(26px,5vw,36px);text-transform:none;font-weight:400;max-width:28ch}
+.empty > .muted{max-width:42ch;font-size:14px}
+#lib .empty button{background:transparent;color:var(--ink);font-weight:500}
+#lib .empty button.primary{border-bottom:1px solid var(--line);border-radius:0}
+.demo-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;width:min(220px,100%)}
 .demo-grid i{aspect-ratio:1;background:var(--cell);border-radius:3px;display:grid;place-items:center}
-.demo-grid i::after{content:"";width:68%;height:68%;border-radius:50%;background:var(--rust);transform:scale(var(--s,0))}
+.demo-grid i::after{content:'';width:68%;height:68%;border-radius:50%;background:var(--rust);transform:scale(var(--s,0))}
+@media(prefers-reduced-motion:no-preference){.pattern-sheet{transition:transform .25s}.pcard .thumb:hover .pattern-sheet{transform:translateY(-6px) rotate(0)}}
+@media(max-width:600px){
+  .lib-heading{flex-wrap:wrap;margin:36px 0 28px;gap:12px}
+  .lib-heading h1{font-size:36px}
+  .album-track{gap:18px}
+  .pcard{flex-basis:82%;width:82%;max-width:320px}
+  .pcard .thumb{height:300px;min-height:300px}
+  .pattern-sheet{inset:12px 20px 28px}
+  .pattern-pocket{top:150px;padding:22px 18px}
+  .album-toolbar p{font-size:12px}
+}
 
 /* Import / editor */
 .imp-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;align-items:start}
@@ -162,11 +203,10 @@ label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
     <nav class="nav">
       <div class="links"><span class="muted">Филейное вязание</span></div>
     </nav>
-    <div class="tabs" role="tablist">
-      <span class="on">Мои схемы</span>
-      <button id="btnNew">Добавить<sup>+</sup></button>
-    </div>
-    <p class="lib-intro">Загрузи картинку схемы, проверь распознанные клетки и вяжи: жми «Провязала», а я покажу, какая клетка следующая.</p>
+    <header class="lib-heading">
+      <div><h1>Мои схемы</h1><p>Ряд за рядом, в своём ритме.</p></div>
+      <button id="btnNew" class="primary">+ Новая схема</button>
+    </header>
     <div id="libList"><p class="muted">Загружаю схемы…</p></div>
     <p class="note" id="storeNote" hidden></p>
   </div>
@@ -355,6 +395,16 @@ function makeLocalStore(){
   let cb = null;
   const read = () => LS.get('filet.patterns', {});
   const write = o => LS.set('filet.patterns', o);
+  // Populate the requested album preview once; keep existing work and deletions intact.
+  if (!LS.get('filet.albumExamples.v1', false)){
+    const saved = read();
+    const needed = Math.max(0, 6 - Object.keys(saved).length);
+    albumExamples().slice(0, needed).forEach(p => {
+      if (!saved[p.id]){ const {id, ...body} = p; saved[id] = body; }
+    });
+    write(saved);
+    LS.set('filet.albumExamples.v1', true);
+  }
   return {
     kind:'local',
     subscribe(f){ cb = f; f(Object.entries(read()).map(([id,d]) => ({id, ...d}))); },
@@ -449,6 +499,21 @@ const EXAMPLE = [
 '.....XXX.....',
 '......X......',
 '.............'];
+function albumExamples(){
+  const motifs = [
+    ['Ромбы', (x,y) => { const d = Math.abs(x-7)+Math.abs(y-7); return d === 5 || d <= 1; }],
+    ['Цветок', (x,y) => { const a=x-7,b=y-7; return a*a+b*b<=3 || [[0,-3],[0,3],[-3,0],[3,0]].some(([dx,dy]) => (a-dx)**2+(b-dy)**2<=5); }],
+    ['Волны', (x,y) => (x + Math.floor(y/2)) % 6 < 2],
+    ['Бабочка', (x,y) => { const a=Math.abs(x-7),b=y-7; return (a===0 && Math.abs(b)<5) || (a>0 && a<6 && Math.abs(b)<5 && Math.abs(b)<a+1 && (b<0 || a<5)); }],
+    ['Звезда', (x,y) => { const a=Math.abs(x-7),b=Math.abs(y-7); return a+b<=4 || (a===b && a<=5) || (Math.min(a,b)===0 && Math.max(a,b)<=6); }],
+    ['Сердечко', (x,y) => { const row=EXAMPLE[y-2]; return row && row[x-1]==='X'; }]
+  ];
+  return motifs.map(([name, filled], i) => ({
+    id:'album-example-v1-'+i, name:name+' · пример', w:15, h:15,
+    cells:Array.from({length:15},(_,y)=>Array.from({length:15},(_,x)=>x>0 && x<14 && y>0 && y<14 && filled(x,y) ? '1':'0').join('')),
+    pos:0, firstRtl:true, createdAt:1, updatedAt:6-i
+  }));
+}
 function drawThumb(cv, p, size){
   const cell = Math.max(2, Math.floor(size / Math.max(p.w, p.h)));
   const w = cell*p.w, h = cell*p.h;
@@ -456,39 +521,66 @@ function drawThumb(cv, p, size){
   c.clearRect(0,0,w,h);
   for (let y=0;y<p.h;y++){ const r = p.cells[y]; for (let x=0;x<p.w;x++) drawCell(c, k, x*cell, y*cell, cell, r[x]==='1'); }
 }
+let albumActiveId = null;
 function renderLibrary(){
   const box = $('libList'); box.textContent = '';
   const list = [...patterns.values()].sort((a,b) => (b.updatedAt||0)-(a.updatedAt||0));
   if (!list.length){
     const e = document.createElement('div'); e.className = 'empty';
-    const cap = document.createElement('p'); cap.className = 'cap'; cap.textContent = 'Пока пусто';
-    const t = document.createElement('p'); t.className = 'shout'; t.textContent = 'Добавь картинку схемы — я найду сетку и разберу, какие клетки закрашены.';
+    const cap = document.createElement('p'); cap.className = 'cap'; cap.textContent = 'Твоя первая схема';
+    const t = document.createElement('p'); t.className = 'shout'; t.textContent = 'Начнём с одной схемы';
     const demo = document.createElement('div'); demo.className = 'demo-grid'; demo.setAttribute('aria-hidden','true');
     const sizes = [0,.9,0,.5,0,.7,0, .6,0,.3,.95,0,0,.4, 0,.8,0,0,.5,.2,0];
     sizes.forEach(s => { const i = document.createElement('i'); i.style.setProperty('--s', s); demo.append(i); });
     const r = document.createElement('div'); r.className = 'row'; r.style.justifyContent = 'center';
-    const b1 = document.createElement('button'); b1.className = 'primary'; b1.textContent = 'Добавить схему'; b1.onclick = () => openImport();
-    const b2 = document.createElement('button'); b2.textContent = 'Открыть пример — сердечко 13 × 11'; b2.onclick = addExample;
-    r.append(b1, b2); e.append(cap, t, demo, r); box.append(e); return;
+    const b1 = document.createElement('button'); b1.className = 'primary'; b1.textContent = 'Создать свою схему'; b1.onclick = () => openImport();
+    const b2 = document.createElement('button'); b2.textContent = 'Попробовать на сердечке'; b2.onclick = addExample;
+    const hint = document.createElement('p'); hint.className = 'muted'; hint.textContent = 'Загрузи картинку или нарисуй схему с нуля. Место, где ты остановилась, сохранится автоматически.'; r.append(b1, b2); e.append(cap, t, demo, hint, r); box.append(e); return;
   }
-  const g = document.createElement('div'); g.className = 'grid-list';
+  const g = document.createElement('div'); g.className = 'album-track'; g.tabIndex = 0;
+  g.setAttribute('role', 'region'); g.setAttribute('aria-label', 'Альбом схем. Листайте стрелками влево и вправо');
+  const toolbar = document.createElement('div'); toolbar.className = 'album-toolbar';
+  const hint = document.createElement('p'); hint.textContent = list.length > 1 ? 'Листай и выбирай, что свяжем' : 'Первая страница твоего альбома';
+  const controls = document.createElement('div'); controls.className = 'album-controls';
+  const prev = document.createElement('button'); prev.textContent = '←'; prev.setAttribute('aria-label','Предыдущая схема');
+  const next = document.createElement('button'); next.textContent = '→'; next.setAttribute('aria-label','Следующая схема');
+  const count = document.createElement('span'); count.className = 'album-count num'; count.setAttribute('aria-live','polite');
+  controls.append(prev, count, next); toolbar.append(hint, controls); box.append(toolbar, g);
+  let active = Math.max(0, list.findIndex(p => p.id === albumActiveId));
+  const updateControls = () => { count.textContent = `${active+1} / ${list.length}`; prev.disabled = active === 0; next.disabled = active === list.length-1; albumActiveId = list[active].id; };
+  const offset = i => g.children[i].offsetLeft - g.children[0].offsetLeft;
+  const go = i => { active = Math.max(0, Math.min(list.length-1, i)); updateControls(); g.scrollTo({left:offset(active), behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'}); };
+  prev.onclick = () => go(active-1); next.onclick = () => go(active+1);
+  g.onkeydown = e => { if (e.target !== g) return; if(e.key === 'ArrowRight' || e.key === 'ArrowLeft'){e.preventDefault(); go(active + (e.key === 'ArrowRight' ? 1 : -1));} };
+  let scrollTimer;
+  g.onscroll = () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { if(!g.isConnected) return; let nearest = 0; for(let i=1;i<list.length;i++) if(Math.abs(offset(i)-g.scrollLeft) < Math.abs(offset(nearest)-g.scrollLeft)) nearest=i; active=nearest; updateControls(); }, 120); };
   for (const p of list){
     const total = p.w*p.h, pos = Math.min(p.pos||0, total);
     const r = Math.min(p.h, Math.floor(pos/p.w)+1);
     const card = document.createElement('div'); card.className = 'pcard';
     const th = document.createElement('button'); th.className = 'thumb'; th.setAttribute('aria-label','Вязать «'+(p.name||'')+'»');
-    const cv = document.createElement('canvas'); th.append(cv); drawThumb(cv, p, 130);
+    const sheetTop = document.createElement('span'); sheetTop.className = 'sheet-top';
+    const sheetType = document.createElement('span'); sheetType.textContent = 'Филейная схема';
+    const sheetSize = document.createElement('span'); sheetSize.className = 'num'; sheetSize.textContent = `${p.w} × ${p.h}`;
+    sheetTop.append(sheetType, sheetSize);
+    const cv = document.createElement('canvas'); cv.setAttribute('aria-hidden', 'true');
+    const art = document.createElement('span'); art.className = 'pattern-art'; art.append(cv);
+    const sheet = document.createElement('span'); sheet.className = 'pattern-sheet'; sheet.append(sheetTop, art);
+    const pocket = document.createElement('span'); pocket.className = 'pattern-pocket';
+    const info = document.createElement('span'); info.className = 'pocket-info';
+    const nm = document.createElement('span'); nm.className = 'pocket-title'; nm.textContent = p.name || 'Без названия';
+    const meta = document.createElement('span'); meta.className = 'pocket-meta num';
+    meta.textContent = pos >= total ? 'Завершена' : pos ? `Ряд ${r} из ${p.h} · ${Math.round(pos/total*100)}%` : 'Ещё не начата';
+    const bar = document.createElement('span'); bar.className = 'bar'; const bi = document.createElement('i'); bi.style.width = (pos/total*100)+'%'; bar.append(bi);
+    info.append(nm, meta, bar); pocket.append(info);
+    th.append(sheet, pocket); drawThumb(cv, p, 240);
+    th.setAttribute('aria-label', `Открыть схему «${p.name || 'Без названия'}». ${meta.textContent}`);
     th.onclick = () => openKnit(p.id);
-    const nm = document.createElement('button'); nm.className = 'name'; nm.textContent = p.name || 'Без названия'; nm.onclick = () => openKnit(p.id);
-    const meta = document.createElement('div'); meta.className = 'meta num';
-    meta.textContent = pos >= total ? `Готово · ${p.w} × ${p.h}` : `Ряд ${r} из ${p.h} · ${Math.round(pos/total*100)}% · ${p.w} × ${p.h}`;
-    const bar = document.createElement('div'); bar.className = 'bar'; const bi = document.createElement('i'); bi.style.width = (pos/total*100)+'%'; bar.append(bi);
-    const acts = document.createElement('div'); acts.className = 'acts';
-    const bk = document.createElement('button'); bk.className = 'rust'; bk.textContent = pos ? 'Продолжить' : 'Начать'; bk.onclick = () => openKnit(p.id);
+    const acts = document.createElement('div'); acts.className = 'pocket-actions';
     const be = document.createElement('button'); be.textContent = 'Изменить'; be.onclick = () => openImport(p.id);
     const bd = document.createElement('button'); bd.className = 'danger ghost'; bd.textContent = 'Удалить';
     bd.onclick = () => {
-      acts.textContent = '';
+      acts.textContent = ''; acts.classList.add('confirming');
       const cf = document.createElement('div'); cf.className = 'confirm';
       const t = document.createElement('span'); t.textContent = 'Удалить схему и прогресс?';
       const yes = document.createElement('button'); yes.className = 'rust'; yes.textContent = 'Да, удалить';
@@ -496,10 +588,20 @@ function renderLibrary(){
       const no = document.createElement('button'); no.textContent = 'Отмена'; no.onclick = renderLibrary;
       cf.append(t, yes, no); acts.append(cf);
     };
-    acts.append(bk, be, bd);
-    card.append(th, nm, meta, bar, acts); g.append(card);
+    const menu = document.createElement('details'); menu.className = 'pattern-menu';
+    const trigger = document.createElement('summary'); trigger.textContent = '⋯'; trigger.setAttribute('aria-label', 'Действия со схемой «' + (p.name || 'Без названия') + '»');
+    const items = document.createElement('div'); items.className = 'menu-items'; items.append(be, bd); menu.append(trigger, items);
+    acts.append(menu);
+    card.append(th, acts);
+    g.append(card);
   }
-  box.append(g);
+  updateControls();
+  requestAnimationFrame(() => {
+    if (!g.isConnected || screen !== 'lib') return;
+    // Leave enough trailing space for the last page to snap to the same position.
+    g.style.paddingRight = Math.max(16, g.clientWidth - g.children[0].offsetWidth - 16) + 'px';
+    g.scrollLeft = offset(active);
+  });
 }
 async function addExample(){
   if (!store) return;
