@@ -86,12 +86,14 @@ input[type=range]{width:100%;accent-color:var(--rust)}
 .album-track:focus-visible{outline:2px solid var(--rust);outline-offset:-2px;border-radius:16px}
 .pcard{flex:0 0 320px;width:320px;min-width:0;scroll-snap-align:start;display:flex;flex-direction:column;gap:10px;position:relative}
 .pcard .thumb{position:relative;isolation:isolate;background:transparent;border-radius:18px;display:block;padding:0;height:330px;min-height:330px;width:100%;overflow:visible;filter:none}
-.pattern-sheet{position:absolute;inset:12px 26px 30px;display:flex;align-items:flex-start;justify-content:center;padding:6px 0 0;transform:rotate(-3deg);filter:drop-shadow(1px 4px 3px #00000016);pointer-events:none}
-.pcard:nth-child(even) .pattern-sheet{transform:rotate(3deg)}
-.sheet-top{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:9px;font-weight:400;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.pattern-art{display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;min-height:0;overflow:hidden}
+.pattern-sheet{position:absolute;inset:12px 30px 26px 22px;display:flex;flex-direction:column;gap:14px;align-items:center;padding:22px 16px 18px;background:color-mix(in srgb,var(--card) 94%,var(--sand));border:1px solid var(--line);border-radius:3px;box-shadow:1px 5px 14px #0000000d;transform:rotate(-2deg);pointer-events:none}
+.pcard:nth-child(even) .pattern-sheet{transform:rotate(2deg)}
+.sheet-top{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:8px;font-weight:400;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-right:5px}
+.pattern-art{display:flex;align-items:flex-start;justify-content:center;flex:1;min-height:0;width:100%;overflow:hidden}
 .pattern-art canvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
-.pattern-pocket{position:absolute;inset:164px 4px 0;z-index:1;border:1px solid var(--line);border-top-color:var(--card);border-radius:12px 12px 22px 22px;background:color-mix(in srgb,var(--card) 76%,transparent);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);box-shadow:0 6px 12px #00000006;display:flex;align-items:flex-end;justify-content:space-between;padding:24px;color:var(--ink)}
+.sheet-eyelet{position:absolute;right:13px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--bg);box-shadow:inset 0 1px 2px #0003,0 1px 0 var(--card)}
+.thread-bookmark{position:absolute;right:18px;top:3px;width:38px;height:145px;max-width:none;z-index:4;pointer-events:none}
+.pattern-pocket{position:absolute;inset:180px 4px 0;z-index:1;border:1px solid var(--line);border-top-color:var(--card);border-radius:12px 12px 22px 22px;background:color-mix(in srgb,var(--card) 76%,transparent);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);box-shadow:0 6px 12px #00000006;display:flex;align-items:flex-end;justify-content:space-between;padding:24px;color:var(--ink)}
 .pattern-pocket::after{content:'';position:absolute;inset:8px;border:1px dashed var(--line);border-top:0;border-radius:6px 6px 16px 16px;pointer-events:none}
 .pocket-info{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;min-width:0;position:relative;z-index:1;padding-right:38px}
 .pocket-title{font-family:var(--f-serif);font-size:25px;font-weight:400;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
@@ -122,8 +124,8 @@ input[type=range]{width:100%;accent-color:var(--rust)}
   .album-track{gap:18px}
   .pcard{flex-basis:82%;width:82%;max-width:320px}
   .pcard .thumb{height:300px;min-height:300px}
-  .pattern-sheet{inset:12px 20px 28px}
-  .pattern-pocket{top:150px;padding:22px 18px}
+  .pattern-sheet{inset:12px 26px 22px 20px;padding:20px 14px 16px;gap:12px}
+  .pattern-pocket{top:160px;padding:20px 18px}
   .album-toolbar p{font-size:12px}
 }
 
@@ -514,51 +516,25 @@ function albumExamples(){
     pos:0, firstRtl:true, createdAt:1, updatedAt:6-i
   }));
 }
-// Decorative textile preview only: the editor and knitting chart retain exact cells.
+// Printed preview uses real pattern cells; the counting and editor views are unchanged.
 function drawThumb(cv, p, size){
-  const pad = 9, cell = (size-pad*2)/Math.max(p.w,p.h);
+  const cell = (size-2)/Math.max(p.w,p.h);
   const w = cell*p.w, h = cell*p.h;
-  const c = setupCanvas(cv, w+pad*2, h+pad*2), k = colors();
-  c.clearRect(0,0,w+pad*2,h+pad*2);
-  c.translate(pad,pad); c.lineCap = 'round'; c.lineJoin = 'round';
-  const thread = Math.max(.55, Math.min(2.4, cell*.15));
-  // Filled mesh squares are woven blocks, with fine parallel strands.
+  const c = setupCanvas(cv,w+2,h+2), k=colors();
+  c.clearRect(0,0,w+2,h+2); c.translate(1,1);
+  c.fillStyle=k.rust;
   for(let y=0;y<p.h;y++) for(let x=0;x<p.w;x++){
-    if(p.cells[y][x] !== '1') continue;
-    c.fillStyle=k.rust; c.fillRect(x*cell,y*cell,cell,cell);
-    if(cell>=5){
-      c.strokeStyle=k.rust; c.globalAlpha=.22; c.lineWidth=.6;
-      for(let strand=2;strand<cell;strand+=2.5){
-        c.beginPath(); c.moveTo(x*cell+strand,y*cell+1); c.lineTo(x*cell+strand,(y+1)*cell-1); c.stroke();
-      }
-      c.globalAlpha=1;
+    if(p.cells[y][x]==='1'){
+      const gap = cell>4 ? Math.min(.9,cell*.06) : 0;
+      c.globalAlpha=.82;
+      c.fillRect(x*cell+gap,y*cell+gap,cell-gap*2,cell-gap*2);
     }
   }
-  // Open squares remain transparent: only their yarn edges are drawn.
-  const mesh = (color,width) => {
-    c.strokeStyle=color;c.lineWidth=width;c.beginPath();
-    for(let x=0;x<=p.w;x++){c.moveTo(x*cell,0);c.lineTo(x*cell,h);}
-    for(let y=0;y<=p.h;y++){c.moveTo(0,y*cell);c.lineTo(w,y*cell);}
-    c.stroke();
-  };
-  mesh(k.rust,thread);
-  // A narrow looped crochet edging around the sample.
-  c.strokeStyle=k.rust;c.lineWidth=Math.max(1,thread*.85);
-  const scallops = Math.max(5,cell);
-  const nx=Math.max(1,Math.round(w/scallops)), ny=Math.max(1,Math.round(h/scallops));
+  c.globalAlpha=1; c.strokeStyle=k.cell; c.lineWidth=cell>4 ? .7 : .35;
   c.beginPath();
-  for(let i=0;i<nx;i++){
-    const x=i*w/nx, step=w/nx;
-    c.moveTo(x,0);c.quadraticCurveTo(x+step/2,-6,x+step,0);
-    c.moveTo(x,h);c.quadraticCurveTo(x+step/2,h+6,x+step,h);
-  }
-  for(let i=0;i<ny;i++){
-    const y=i*h/ny, step=h/ny;
-    c.moveTo(0,y);c.quadraticCurveTo(-6,y+step/2,0,y+step);
-    c.moveTo(w,y);c.quadraticCurveTo(w+6,y+step/2,w,y+step);
-  }
+  for(let x=0;x<=p.w;x++){c.moveTo(x*cell,0);c.lineTo(x*cell,h);}
+  for(let y=0;y<=p.h;y++){c.moveTo(0,y*cell);c.lineTo(w,y*cell);}
   c.stroke();
-  c.strokeStyle=k.rust;c.lineWidth=thread*1.3;c.strokeRect(0,0,w,h);
 }
 let albumActiveId = null;
 function renderLibrary(){
@@ -600,7 +576,11 @@ function renderLibrary(){
     const th = document.createElement('button'); th.className = 'thumb'; th.setAttribute('aria-label','Вязать «'+(p.name||'')+'»');
     const cv = document.createElement('canvas'); cv.setAttribute('aria-hidden', 'true');
     const art = document.createElement('span'); art.className = 'pattern-art'; art.append(cv);
-    const sheet = document.createElement('span'); sheet.className = 'pattern-sheet'; sheet.append(art);
+    const sheet = document.createElement('span'); sheet.className = 'pattern-sheet';
+    const label = document.createElement('span'); label.className = 'sheet-top'; label.textContent = 'Филейная схема';
+    const eyelet = document.createElement('span'); eyelet.className = 'sheet-eyelet'; eyelet.setAttribute('aria-hidden','true');
+    const thread = document.createElement('img'); thread.className = 'thread-bookmark'; thread.src = 'assets/thread-bookmark.svg'; thread.alt = ''; thread.draggable = false;
+    sheet.append(label, art, eyelet);
     const pocket = document.createElement('span'); pocket.className = 'pattern-pocket';
     const info = document.createElement('span'); info.className = 'pocket-info';
     const nm = document.createElement('span'); nm.className = 'pocket-title'; nm.textContent = p.name || 'Без названия';
@@ -608,7 +588,7 @@ function renderLibrary(){
     meta.textContent = pos >= total ? `Завершена · ${p.w} × ${p.h}` : pos ? `Ряд ${r} из ${p.h} · ${Math.round(pos/total*100)}%` : `${p.w} × ${p.h} клеток · Ещё не начата`;
     const bar = document.createElement('span'); bar.className = 'bar'; const bi = document.createElement('i'); bi.style.width = (pos/total*100)+'%'; bar.append(bi);
     info.append(nm, meta, bar); pocket.append(info);
-    th.append(sheet, pocket); drawThumb(cv, p, 240);
+    th.append(sheet, pocket, thread); drawThumb(cv, p, 240);
     th.setAttribute('aria-label', `Открыть схему «${p.name || 'Без названия'}». ${meta.textContent}`);
     th.onclick = () => openKnit(p.id);
     const acts = document.createElement('div'); acts.className = 'pocket-actions';

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 260" fill="none">
+<defs>
+ <linearGradient id="yarn" x1="10" y1="0" x2="58" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#A64B2D"/><stop offset=".45" stop-color="#D78660"/><stop offset="1" stop-color="#AF4F2C"/></linearGradient>
+ <filter id="shadow" x="-50%" y="-10%" width="200%" height="130%"><feDropShadow dx="1" dy="2" stdDeviation="1.1" flood-color="#4C2416" flood-opacity=".18"/></filter>
+</defs>
+<g filter="url(#shadow)" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M14 39 C7 28 10 11 22 8 C43 2 56 28 54 56 C53 88 36 100 43 128 C48 150 65 155 59 179 C55 197 38 208 43 231 C45 239 50 246 56 249" stroke="url(#yarn)" stroke-width="2.8"/>
+ <path d="M14 39 C7 28 10 11 22 8 C43 2 56 28 54 56 C53 88 36 100 43 128 C48 150 65 155 59 179 C55 197 38 208 43 231 C45 239 50 246 56 249" stroke="#F2BC8F" stroke-opacity=".38" stroke-width=".6"/>
+ <path d="M14 38 C24 35 22 24 15 25 C10 25 9 31 13 34 L20 30" stroke="#B65A36" stroke-width="2.2"/>
+</g>
+</svg>
