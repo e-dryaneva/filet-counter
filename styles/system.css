@@ -35,7 +35,6 @@ button[data-appearance=accent],#lib #btnNew{font-family:var(--f-sans);font-size:
 .template-card .pocket-actions{position:static;grid-column:2;grid-row:2/span 2;align-self:start;margin:0}
 .template-card .template-add{display:grid;place-items:center;width:var(--control-height);min-width:var(--control-height);height:var(--control-height);padding:0;border-radius:50%;border:1px solid var(--line)}
 .template-status{display:inline-block;justify-self:start;align-self:start;font:var(--font-caption);color:var(--muted)}
-.sheet-status{position:absolute;top:var(--space-3);left:var(--space-3);max-width:calc(100% - 56px);padding:2px var(--space-2);border-radius:var(--radius-pill);background:var(--cell);color:var(--ink)}
 .template-preview-meta{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-1) var(--space-3)}
 .template-preview-meta #templateMeta{margin:0}
 .filter-picker summary,.filter-options button{font-size:var(--text-label);min-height:var(--control-height);border-radius:var(--radius-control)}
@@ -224,11 +223,11 @@ button[data-appearance]:not(:disabled):active,#lib #btnNew:not(:disabled):active
 .ui-menu::backdrop{background:transparent}
 .ui-menu button{position:relative;display:block;min-width:0;width:100%;min-height:var(--control-height);padding:var(--space-2) var(--space-3);border-radius:var(--radius-control);text-align:left;font:var(--font-ui);background:transparent;white-space:normal}
 .ui-menu button[role=menuitemradio]{padding-right:var(--space-8)}
-.ui-menu button[aria-checked=true]{background:var(--selection)}
+.ui-menu button[aria-checked=true]{background:transparent}
 .ui-menu button[aria-checked=true]::after{content:'';position:absolute;right:var(--space-4);top:50%;translate:0 -50%;width:10px;height:6px;border:solid currentColor;border-width:0 0 1.5px 1.5px;transform:rotate(-45deg)}
 .ui-menu button:focus-visible{outline:2px solid var(--focus-color);outline-offset:-2px}
-.ui-menu button:not(:disabled):hover{background:var(--surface-hover)}
-.ui-menu button:not(:disabled):active{background:var(--surface-pressed)}
+@media(hover:hover){.ui-menu button:not(:disabled):hover{background:var(--surface-hover)}}
+.ui-menu button:not(:disabled):active{background:transparent}
 .ui-menu small{font:var(--font-caption);display:block;margin-top:var(--space-1);color:var(--muted)}
 
 /* Form feedback belongs to the relevant field, not a disappearing toast. */
@@ -348,7 +347,6 @@ input:is([type=text],[type=number]):read-only{background:transparent}
 /* Creation action uses the same warm neutral surface as collection controls. */
 #lib #btnNew[data-appearance]{--button-bg:var(--sunk);--button-hover:var(--surface-hover);--button-pressed:var(--surface-pressed);border-color:var(--line)}
 .activity-pace{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-2) var(--space-4);padding-bottom:var(--space-6);margin-bottom:var(--space-6);border-bottom:1px solid var(--line)}
-.activity-pace h3{font-size:var(--text-card);margin:0}
 .activity-pace p{display:flex;align-items:baseline;gap:var(--space-2);margin:0}
 .activity-pace strong{font-family:var(--f-serif);font-size:var(--text-metric-primary);font-weight:400;line-height:1.2}
 .activity-pace span{font:var(--font-caption);color:var(--muted)}
@@ -357,3 +355,34 @@ input:is([type=text],[type=number]):read-only{background:transparent}
 /* Reserve room for the date above the activity circle on narrow screens. */
 @media(max-width:700px){.activity-grid .activity-day{min-height:52px}}
 
+
+/* Summary, ownership and actions stay outside the pattern artwork. */
+.activity-heading.activity-pace{justify-content:flex-start;column-gap:var(--space-6)}
+.template-card > .pocket-info > .card-status{grid-column:1;grid-row:3;display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1)}
+.card-status::before{content:'';width:9px;height:5px;flex:none;border:solid currentColor;border-width:0 0 1.5px 1.5px;transform:rotate(-45deg)}
+#collectionTools .backup-menu summary{width:auto;gap:var(--space-2);padding:var(--space-2) var(--space-3);font:var(--font-ui);white-space:nowrap}
+#collectionTools .backup-menu summary .ui-icon{width:16px;height:16px}
+
+/* Preview: shared edges, a compact heading, and a vertical action group. */
+#templateDialog{padding:var(--panel-padding);gap:var(--space-4)}
+#templateDialog .dialog-header{gap:var(--space-3);align-items:flex-start}
+#templateDialog .template-heading{min-width:0;display:grid;gap:var(--space-2)}
+#templateDialog h2{text-wrap:initial;overflow-wrap:anywhere}
+#templateDialog #templateMeta{font:var(--font-caption);margin:0}
+#templateDialog .dialog-body{gap:var(--space-4)}
+#templateDialog .template-preview-art{padding:var(--space-3)}
+#templateDialog #templateEstimate{font:var(--font-caption);margin:0}
+#templateDialog .dialog-footer{flex-direction:column;align-items:stretch;gap:var(--space-2)}
+#templateDialog .dialog-footer button{width:100%;flex:none}
+
+/* Work mode: identity is context, the current cell is the primary instruction. */
+#knit .knit-heading-info .here{font-family:var(--f-sans);font-size:var(--text-label);font-weight:600;line-height:var(--leading-body)}
+#knit .knit-progress{font-size:var(--text-caption);line-height:var(--leading-body)}
+#knit .posbig{font-family:var(--f-sans);font-size:var(--text-body);font-weight:500;line-height:var(--leading-body)}
+#knit .posbig small{font-family:inherit;font-size:var(--text-label);font-weight:400;color:var(--muted)}
+#knit .dir{font:var(--font-caption);background:transparent;padding:0;color:var(--muted)}
+#knit .cellname{font-family:var(--f-sans);font-size:var(--text-section);font-weight:600;line-height:var(--leading-heading)}
+#knit .cellnum{font-family:var(--f-sans);font-size:var(--text-body);font-weight:400;line-height:var(--leading-body);margin-top:var(--space-1);color:var(--muted)}
+#knit .swatch{width:56px;height:56px;flex-basis:56px}
+#knit .run{font-family:var(--f-sans);font-size:var(--text-body);line-height:var(--leading-body)}
+#knit .run strong{font-weight:600}

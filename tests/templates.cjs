@@ -33,7 +33,7 @@ vm.runInContext(source.slice(source.indexOf('let addingTemplate=false;'),source.
 (async()=>{
  const opener=new Element();
  context.openTemplate(template,opener);
- assert.equal($('templateStatus').hidden,false);
+ assert.equal($('previewMine').hidden,false);
  assert.equal($('previewAdd').disabled,false,'An existing copy never blocks another addition');
  assert.equal($('previewAdd').textContent,'Добавить ещё');
 
@@ -60,17 +60,17 @@ vm.runInContext(source.slice(source.indexOf('let addingTemplate=false;'),source.
  assert.equal(persisted.size,3,'Fast repeated clicks during a save create only one copy');
 
  patterns.clear();context.openTemplate(template,opener);
- assert.equal($('templateStatus').hidden,true,'Removing the last copy clears its status');
+ assert.equal($('previewMine').hidden,true,'Removing the last copy clears its status');
  assert.equal($('previewAdd').textContent,'Добавить в мои схемы');
  failSave=true;
  await $('previewAdd').onclick();
- assert.equal(patterns.size,0);assert.equal($('templateStatus').hidden,true);
+ assert.equal(patterns.size,0);assert.equal($('previewMine').hidden,true);
  assert.equal($('previewAdd').disabled,false,'Storage failure leaves the action retryable');
  assert.match(messages.at(-1),/Не получилось/);
  failSave=false;failAnimation=true;
  await $('previewAdd').onclick();
  assert.equal(patterns.size,1,'Interrupted decoration does not discard a saved copy');
- assert.equal($('templateStatus').hidden,false);
+ assert.equal($('previewMine').hidden,false);
  assert.equal($('previewAdd').disabled,false);
  failAnimation=false;
 
@@ -86,7 +86,7 @@ vm.runInContext(source.slice(source.indexOf('let addingTemplate=false;'),source.
  const previous=patterns.size;await action.onclick();
  assert.equal(patterns.size,previous+1,'The compact plus also adds a separate copy');
  action=renderAction();assert.equal(action.disabled,false);
- assert.equal(context.sheet.children[0].hidden,false);
- patterns.clear();renderAction();assert.equal(context.sheet.children[0].hidden,true);
+ assert.equal(context.info.children[0].hidden,false);
+ patterns.clear();renderAction();assert.equal(context.info.children[0].hidden,true);
  console.log('PASS: repeat template additions, independent progress, busy guard, failure/retry, status and compact action');
 })().catch(error=>{console.error(error);process.exitCode=1;});

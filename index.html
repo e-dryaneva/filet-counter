@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="styles/fonts.css">
 <link rel="stylesheet" href="styles/tokens.css?v=aeb7f523f0">
 <link rel="stylesheet" href="styles/components.css?v=729c374cb5">
-<link rel="stylesheet" href="styles/system.css?v=f2d7e0074d">
+<link rel="stylesheet" href="styles/system.css?v=a24fc44e97">
 </head>
 <body>
 <section id="lib">
@@ -38,7 +38,7 @@
         <details class="filter-picker" id="motifPicker"><summary>Мотив<span aria-hidden="true" data-icon="down"></span></summary><div class="filter-options"><button type="button" data-value="">Все мотивы</button><button type="button" data-value="geometry">Геометрия</button><button type="button" data-value="flowers">Цветы</button><button type="button" data-value="nature">Природа</button><button type="button" data-value="symbols">Символы</button></div><input type="hidden" id="filterMotif" value=""></details>
     <div id="collectionTools" class="collection-tools" hidden>
       <details class="filter-picker" id="sortPicker"><summary>Порядок<span aria-hidden="true" data-icon="down"></span></summary><div class="filter-options"><button data-value="active">Недавно вязала</button><button data-value="added">Недавно добавила</button><button data-value="name">По алфавиту</button></div><input type="hidden" id="patternSort" value="active"></details>
-      <details class="backup-menu"><summary aria-label="Действия с коллекцией" data-icon="more"></summary><div class="backup-options"><button id="exportPatterns" class="ghost">Скачать резервную копию</button><button id="restoreBackup" class="ghost">Восстановить из копии</button></div></details>
+      <details class="backup-menu"><summary aria-label="Резервные копии">Резервные копии<span aria-hidden="true" data-icon="down"></span></summary><div class="backup-options"><button id="exportPatterns" class="ghost">Скачать резервную копию</button><button id="restoreBackup" class="ghost">Восстановить из копии</button></div></details>
     </div>
         <button id="clearFilters" class="ghost" hidden data-appearance="flat">Очистить</button>
       </div>
@@ -63,7 +63,7 @@
   </div>
   <footer class="dialog-footer"><button id="restoreChoose" data-appearance="primary">Выбрать файл</button><button id="restoreConfirm" data-appearance="primary" hidden>Восстановить</button><button id="restoreDone" data-appearance="primary" hidden>К моим схемам</button></footer>
 </dialog>
-<dialog id="templateDialog" class="app-dialog template-preview" aria-labelledby="templateTitle"><header class="dialog-header"><h2 id="templateTitle"></h2><button id="closeTemplate" aria-label="Закрыть просмотр" data-icon="close" data-appearance="flat"></button></header><div class="dialog-body"><div class="template-preview-meta"><p id="templateMeta" class="muted"></p><span id="templateStatus" class="template-status" hidden>В&nbsp;моих схемах</span></div><div class="template-preview-art"><canvas id="templateCanvas" aria-label="Предпросмотр схемы"></canvas></div><p id="templateEstimate" class="muted"></p></div><footer class="dialog-footer"><button id="previewAdd" class="primary" data-appearance="primary">Добавить в мои схемы</button><button id="previewMine" class="ghost" hidden data-appearance="flat">Открыть мои схемы</button></footer></dialog>
+<dialog id="templateDialog" class="app-dialog template-preview" aria-labelledby="templateTitle"><header class="dialog-header"><div class="template-heading"><h2 id="templateTitle"></h2><p id="templateMeta" class="muted"></p></div><button id="closeTemplate" aria-label="Закрыть просмотр" data-icon="close" data-appearance="flat"></button></header><div class="dialog-body"><div class="template-preview-art"><canvas id="templateCanvas" aria-label="Предпросмотр схемы"></canvas></div><p id="templateEstimate" class="muted"></p></div><footer class="dialog-footer"><button id="previewAdd" class="primary" data-appearance="primary">Добавить в мои схемы</button><button id="previewMine" class="ghost" hidden data-appearance="flat">Открыть мои схемы</button></footer></dialog>
 <dialog id="editorDialog" aria-labelledby="editorTitle">
   <header class="editor-top"><div><h2 id="editorTitle">Редактор схемы</h2><span id="editorDimensions" class="muted"></span></div><button id="closeEditor" type="button" data-appearance="primary" aria-label="Применить изменения">Применить<span class="editor-apply-suffix">изменения</span></button></header>
   <div class="editor-tools">
@@ -743,7 +743,6 @@ function syncTemplatePreview(){
   if(!previewTemplate)return;
   const added=hasTemplate(previewTemplate);
   $('previewAdd').textContent=added?'Добавить ещё':'Добавить в мои схемы';
-  $('templateStatus').hidden=!added;
   $('previewMine').hidden=!added;
 }
 function openTemplate(template,opener){
@@ -900,7 +899,7 @@ function renderActivityTracker(){
   const days=activityDemo?demoActivityDays(start,today):actualDays;
   const keys=Object.keys(days).filter(k=>k>=activityDateKey(start)&&k<=activityDateKey(today));
   const total=keys.reduce((n,k)=>n+days[k],0),activeDays=keys.filter(k=>days[k]>0).length;
-  const head=document.createElement('div');head.className='activity-heading';
+  const head=document.createElement('div');head.className='activity-heading activity-pace';
   const title=document.createElement('h2');title.textContent='Темп вязания';head.append(title);
   const stats=document.createElement('div');stats.className='activity-stats';
   for(const [value,label] of [[days[activityDateKey(today)]||0,'клеток сегодня'],[activeDays,'дней с вязанием']]){
@@ -947,10 +946,8 @@ function renderActivityTracker(){
   const analytics=document.createElement('aside');analytics.className='activity-analytics';
   const sub=document.createElement('h3');sub.textContent='За последние 28 дней';analytics.append(sub);
   const pace=knittingPace();
-  const paceSummary=document.createElement('div');paceSummary.className='activity-pace';
-  const paceTitle=document.createElement('h3');paceTitle.textContent='Твой темп';
   const paceValue=document.createElement('p'),paceNumber=document.createElement('strong'),paceLabel=document.createElement('span');
-  paceNumber.textContent=pace?String(Math.round(pace)):'—';paceLabel.textContent='клеток в час';paceValue.append(paceNumber,paceLabel);paceSummary.append(paceTitle,paceValue);
+  paceNumber.textContent=pace?String(Math.round(pace)):'—';paceLabel.textContent='клеток в час';paceValue.append(paceNumber,paceLabel);head.append(paceValue);
   const metricGrid=document.createElement('div');metricGrid.className='metric-grid';analytics.append(metricGrid);
   for(const [value,label] of [[days[activityDateKey(today)]||0,'клеток сегодня'],[activeDays,'дней с вязанием'],[insights.best,'лучшая серия'],[insights.average,'клеток за активный день']]){
     const item=document.createElement('p'),strong=document.createElement('strong'),caption=document.createElement('span');
@@ -958,7 +955,7 @@ function renderActivityTracker(){
   }
 
   const body=document.createElement('div');body.className='activity-body';const calendarSide=document.createElement('div');calendarSide.append(calendar,legend);body.append(calendarSide,analytics);
-  root.append(head,paceSummary,body);
+  root.append(head,body);
 }
 const normalizePatternName = value => value.normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
 let libraryMotionObserver=null,cleanupLibraryScroll=null;
@@ -1137,7 +1134,7 @@ function renderLibrary(){
     const items = document.createElement('div'); items.className = 'menu-items'; items.append(be, bd); menu.append(trigger, items);
     if(isTemplate){
       const added=hasTemplate(p);
-      const status=document.createElement('span');status.className='template-status sheet-status';status.textContent='В\u00a0моих схемах';status.hidden=!added;sheet.append(status);
+      const status=document.createElement('span');status.className='template-status card-status';status.textContent='В\u00a0моих схемах';status.hidden=!added;info.append(status);
       const add=document.createElement('button');add.type='button';add.className='template-add';add.dataset.appearance='secondary';add.innerHTML=icon('plus');
       const label=added?`Добавить ещё одну схему «${p.name}»`:`Добавить «${p.name}» в мои схемы`;add.setAttribute('aria-label',label);add.title=label;
       add.onclick=async()=>{if(addingTemplate)return;UI.setBusy(add,true);try{await useTemplate(p,th);}finally{UI.setBusy(add,false);if(screen==='lib'&&librarySection==='templates'&&document.activeElement===document.body)$('libList').querySelector(`[data-template-id="${p.id}"] .template-add`)?.focus({preventScroll:true});}};
