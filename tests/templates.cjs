@@ -86,7 +86,7 @@ vm.runInContext(source.slice(source.indexOf('let addingTemplate=false;'),source.
  const previous=patterns.size;await action.onclick();
  assert.equal(patterns.size,previous+1,'The compact plus also adds a separate copy');
  action=renderAction();assert.equal(action.disabled,false);
- assert.equal(context.info.children[0].hidden,false);
- patterns.clear();renderAction();assert.equal(context.info.children[0].hidden,true);
+ assert.equal(context.sheet.children.length,0,'No status overlays the artwork');
+ patterns.clear();renderAction();assert.equal(context.sheet.children.length,0);
  console.log('PASS: repeat template additions, independent progress, busy guard, failure/retry, status and compact action');
 })().catch(error=>{console.error(error);process.exitCode=1;});

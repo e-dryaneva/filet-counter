@@ -386,3 +386,22 @@ input:is([type=text],[type=number]):read-only{background:transparent}
 #knit .swatch{width:56px;height:56px;flex-basis:56px}
 #knit .run{font-family:var(--f-sans);font-size:var(--text-body);line-height:var(--leading-body)}
 #knit .run strong{font-weight:600}
+
+/* Fixed slots keep neighbouring template metadata and actions aligned. */
+.template-card > .pocket-info{grid-template-rows:calc(2 * var(--text-card) * 1.2) 44px;align-items:start}
+.template-card .pocket-title{grid-row:1;line-height:1.2;min-height:calc(2 * var(--text-card) * 1.2)}
+.template-card .pocket-meta{grid-row:2;align-self:start;padding-top:4px}
+.template-card .pocket-actions{grid-row:2;align-self:center}
+#lib:has(#homeTab[aria-current=page]) .lib-heading{margin-bottom:12px}
+.ui-menu button[role=menuitemradio]{padding:0 28px 0 0;font-weight:400;min-height:44px}
+.menu-sheet>.ui-menu button[role=menuitemradio]{padding-block:0;min-height:44px}
+.ui-menu button[role=menuitemradio]::after{right:0}
+.activity-grid{grid-template-rows:none;grid-auto-rows:auto}
+.activity-blank{background:var(--sunk);min-height:52px}
+.activity-month-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px}
+.activity-month-nav button{width:44px;padding:0;flex:none}
+.activity-month-nav input{min-width:0;max-width:100%;min-height:44px;border:0;background:transparent;color:var(--ink);font:var(--font-ui);text-align:center}
+#knit .knit-heading-info .here{font-family:var(--f-serif);font-size:var(--text-card);font-weight:400;line-height:1.2}
+#knit .cellname{font-family:var(--f-sans);font-size:var(--text-label);font-weight:400;line-height:1.5;color:var(--muted)}
+#knit .cellnum{font-size:var(--text-body);font-weight:500;color:var(--ink)}
+#knit .run{font-size:var(--text-body);font-weight:400}

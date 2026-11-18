@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="styles/fonts.css">
 <link rel="stylesheet" href="styles/tokens.css?v=aeb7f523f0">
 <link rel="stylesheet" href="styles/components.css?v=729c374cb5">
-<link rel="stylesheet" href="styles/system.css?v=a24fc44e97">
+<link rel="stylesheet" href="styles/system.css?v=8e53cf57ab">
 </head>
 <body>
 <section id="lib">
@@ -201,6 +201,7 @@
 <script src="scripts/backup.js"></script>
 <script src="scripts/offline.js"></script>
 <script src="scripts/demo.js"></script>
+<script src="scripts/calendar.js"></script>
 <script>
 (() => {
 "use strict";
@@ -889,23 +890,21 @@ function activityInsights(days,start,today){
   }
   return {weeks,best,average:active?Math.round(total/active):0};
 }
+let activityMonth=null;
 function renderActivityTracker(){
   const root=$('activityTracker');root.hidden=librarySection!=='home';
   if(root.hidden)return;
   root.textContent='';
   const actualDays=LS.get('filet.activity.v1',{days:{}}).days || {};
   const today=new Date();today.setHours(12,0,0,0);
-  const start=new Date(today);start.setDate(today.getDate()-((today.getDay()+6)%7)-21);
-  const days=activityDemo?demoActivityDays(start,today):actualDays;
-  const keys=Object.keys(days).filter(k=>k>=activityDateKey(start)&&k<=activityDateKey(today));
-  const total=keys.reduce((n,k)=>n+days[k],0),activeDays=keys.filter(k=>days[k]>0).length;
+  const currentMonth=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const selected=activityMonth && activityMonth<=currentMonth?activityMonth:currentMonth;
+  const [year,month]=selected.split('-').map(Number);
+  const days=actualDays;
+  const period=FiletCalendar.monthData(days,year,month-1,today);
+  const {start,total}=period,activeDays=period.active;
   const head=document.createElement('div');head.className='activity-heading activity-pace';
   const title=document.createElement('h2');title.textContent='Темп вязания';head.append(title);
-  const stats=document.createElement('div');stats.className='activity-stats';
-  for(const [value,label] of [[days[activityDateKey(today)]||0,'клеток сегодня'],[activeDays,'дней с вязанием']]){
-    const stat=document.createElement('div'),number=document.createElement('strong'),caption=document.createElement('span');
-    number.textContent=String(value);number.className='num';caption.textContent=label;stat.append(number,caption);stats.append(stat);
-  }
   const calendar=document.createElement('div');calendar.className='activity-calendar';
   const weekdays=document.createElement('div');weekdays.className='activity-weekdays';weekdays.setAttribute('aria-hidden','true');
   for(const text of ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']){const d=document.createElement('span');d.textContent=text;weekdays.append(d);}
@@ -928,33 +927,42 @@ function renderActivityTracker(){
     tooltip.style.left=left+'px';tooltip.style.top=(rect.top-bounds.top-tooltip.offsetHeight-10)+'px';
     tooltip.style.setProperty('--tip-x',Math.max(12,Math.min(tooltip.offsetWidth-12,center-left))+'px');
   };
-  const largestDay=Math.max(1,...keys.map(k=>days[k]));
-  for(let i=0;i<28;i++){
-    const date=new Date(start);date.setDate(start.getDate()+i);const key=activityDateKey(date),n=days[key]||0;
+  const largestDay=period.max;
+  for(let i=0;i<period.offset;i++){const blank=document.createElement('span');blank.className='activity-blank';blank.setAttribute('aria-hidden','true');grid.append(blank);}
+  for(const {date,value:n,future} of period.dates){
+    const key=activityDateKey(date);
     const cell=document.createElement('button');cell.className='activity-day';cell.dataset.level=n===0?'0':n<10?'1':n<30?'2':n<80?'3':'4';
     const label=`${date.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}: ${n} ${plural(n,'клетка','клетки','клеток')}`;
-    cell.setAttribute('aria-label',label);cell.disabled=date>today;
+    cell.setAttribute('aria-label',label);cell.disabled=future;
     const dayNumber=document.createElement('span');dayNumber.className='activity-date num';dayNumber.textContent=String(date.getDate());dayNumber.setAttribute('aria-hidden','true');cell.append(dayNumber);
     if(n>0 && date<=today){const dot=document.createElement('span');dot.className='activity-dot';dot.setAttribute('aria-hidden','true');dot.style.width=Math.max(7,Math.sqrt(n/largestDay)*58)+'%';cell.append(dot);}
     if(key===activityDateKey(today))cell.setAttribute('aria-current','date');
     cell.onclick=()=>showTooltip(cell,date,n);cell.onfocus=()=>showTooltip(cell,date,n);grid.append(cell);
   }
-  calendar.append(weekdays,grid,tooltip);
-  const legend=document.createElement('div');legend.className='activity-legend';
-  legend.textContent='Чем больше круг, тем больше провязано за день';
-  const insights=activityInsights(days,start,today);
+  const monthNav=document.createElement('div');monthNav.className='activity-month-nav';
+  const prev=document.createElement('button'),next=document.createElement('button'),picker=document.createElement('input');
+  prev.innerHTML=icon('back');prev.setAttribute('aria-label','Предыдущий месяц');prev.dataset.appearance='flat';
+  next.innerHTML=icon('next');next.setAttribute('aria-label','Следующий месяц');next.dataset.appearance='flat';next.disabled=selected>=currentMonth;
+  picker.type='month';picker.value=selected;picker.max=currentMonth;picker.min='2000-01';picker.setAttribute('aria-label','Месяц активности');
+  const changeMonth=(value,focus)=>{activityMonth=value;renderActivityTracker();$('activityTracker').querySelector(focus)?.focus({preventScroll:true});};
+  const move=delta=>{const d=new Date(year,month-1+delta,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+  prev.disabled=selected<='2000-01';prev.onclick=()=>changeMonth(move(-1),'button[aria-label="Предыдущий месяц"]');
+  next.onclick=()=>changeMonth(move(1),'input[type=month]');
+  picker.onchange=()=>{if(/^\d{4}-\d{2}$/.test(picker.value)&&picker.value>='2000-01'&&picker.value<=currentMonth)changeMonth(picker.value,'input[type=month]');};
+  monthNav.append(prev,picker,next);calendar.append(monthNav,weekdays,grid,tooltip);
+  const insights=period;
   const analytics=document.createElement('aside');analytics.className='activity-analytics';
-  const sub=document.createElement('h3');sub.textContent='За последние 28 дней';analytics.append(sub);
+  const sub=document.createElement('h3');sub.textContent=start.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});sub.style.textTransform='capitalize';analytics.append(sub);
   const pace=knittingPace();
   const paceValue=document.createElement('p'),paceNumber=document.createElement('strong'),paceLabel=document.createElement('span');
   paceNumber.textContent=pace?String(Math.round(pace)):'—';paceLabel.textContent='клеток в час';paceValue.append(paceNumber,paceLabel);head.append(paceValue);
   const metricGrid=document.createElement('div');metricGrid.className='metric-grid';analytics.append(metricGrid);
-  for(const [value,label] of [[days[activityDateKey(today)]||0,'клеток сегодня'],[activeDays,'дней с вязанием'],[insights.best,'лучшая серия'],[insights.average,'клеток за активный день']]){
+  for(const [value,label] of [[total,'клеток за месяц'],[activeDays,'дней с вязанием'],[insights.best,'лучшая серия'],[insights.average,'клеток за активный день']]){
     const item=document.createElement('p'),strong=document.createElement('strong'),caption=document.createElement('span');
     strong.textContent=String(value);caption.textContent=label;item.append(strong,caption);metricGrid.append(item);
   }
 
-  const body=document.createElement('div');body.className='activity-body';const calendarSide=document.createElement('div');calendarSide.append(calendar,legend);body.append(calendarSide,analytics);
+  const body=document.createElement('div');body.className='activity-body';const calendarSide=document.createElement('div');calendarSide.append(calendar);body.append(calendarSide,analytics);
   root.append(head,body);
 }
 const normalizePatternName = value => value.normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
@@ -1134,7 +1142,6 @@ function renderLibrary(){
     const items = document.createElement('div'); items.className = 'menu-items'; items.append(be, bd); menu.append(trigger, items);
     if(isTemplate){
       const added=hasTemplate(p);
-      const status=document.createElement('span');status.className='template-status card-status';status.textContent='В\u00a0моих схемах';status.hidden=!added;info.append(status);
       const add=document.createElement('button');add.type='button';add.className='template-add';add.dataset.appearance='secondary';add.innerHTML=icon('plus');
       const label=added?`Добавить ещё одну схему «${p.name}»`:`Добавить «${p.name}» в мои схемы`;add.setAttribute('aria-label',label);add.title=label;
       add.onclick=async()=>{if(addingTemplate)return;UI.setBusy(add,true);try{await useTemplate(p,th);}finally{UI.setBusy(add,false);if(screen==='lib'&&librarySection==='templates'&&document.activeElement===document.body)$('libList').querySelector(`[data-template-id="${p.id}"] .template-add`)?.focus({preventScroll:true});}};
@@ -1336,9 +1343,9 @@ function drawMap(p, pos){
   const box = $('mapBox'), cv = $('mapCanvas');
   const maxW = Math.max(200, box.clientWidth - 4);
   const gutter = 26;
-  let cell = Math.floor((maxW - gutter) / p.w);
+  let cell = Math.floor((maxW - 2*gutter) / p.w);
   cell = Math.max(3, Math.min(30, cell));
-  const W = gutter + cell*p.w, H = cell*p.h + 4;
+  const W = 2*gutter + cell*p.w, H = cell*p.h + 4;
   const c = setupCanvas(cv, W, H), k = colors();
   c.clearRect(0,0,W,H);
   const ox = gutter, oy = 2, total = p.w*p.h;
@@ -1350,7 +1357,7 @@ function drawMap(p, pos){
   c.globalAlpha = 1;
   c.fillStyle = k.muted; c.font = `italic ${Math.min(12, Math.max(9, cell))}px Literata, Georgia, serif`; c.textAlign = 'right'; c.textBaseline = 'middle';
   const every = cell >= 10 ? 5 : cell >= 5 ? 10 : 20;
-  for (let r=1;r<=p.h;r++) if (r===1 || r % every === 0) c.fillText(String(r), gutter-6, oy + (p.h-r)*cell + cell/2);
+  for (let r=1;r<=p.h;r++) if (r===1 || r % every === 0){const y=oy+(p.h-r)*cell+cell/2;c.textAlign='right';c.fillText(String(r),gutter-6,y);c.textAlign='left';c.fillText(String(r),ox+cell*p.w+6,y);}
   if (pos < total){
     const cc = cellAt(p, pos);
     c.strokeStyle = k.ink; c.globalAlpha = 0.35; c.lineWidth = 1.5;
