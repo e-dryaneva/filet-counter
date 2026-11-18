@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="styles/fonts.css">
 <link rel="stylesheet" href="styles/tokens.css?v=aeb7f523f0">
 <link rel="stylesheet" href="styles/components.css?v=729c374cb5">
-<link rel="stylesheet" href="styles/system.css?v=a150fcf663">
+<link rel="stylesheet" href="styles/system.css?v=4700ac7b08">
 </head>
 <body>
 <section id="lib">
@@ -45,6 +45,7 @@
     </div>
     <div id="libList"><p class="muted">Загружаю схемы…</p></div>
     <section id="activityTracker" class="activity-tracker" aria-label="Активность вязания"></section>
+    <p class="update-link"><a href="update.html">Проверить обновления</a></p>
     <p class="note" id="storeNote" hidden></p>
   </div>
 </section>
@@ -199,6 +200,8 @@
 <script src="scripts/ui-components.js"></script>
 <script src="scripts/drafts.js"></script>
 <script src="scripts/backup.js"></script>
+<aside id="appUpdate" class="app-update" aria-label="Обновление приложения" hidden><p id="updateStatus" role="status">Доступна новая версия</p><div class="row"><button id="applyUpdate" data-appearance="primary">Обновить</button><button id="deferUpdate" data-appearance="flat">Позже</button></div></aside>
+<script src="scripts/update.js"></script>
 <script src="scripts/offline.js"></script>
 <script src="scripts/demo.js"></script>
 <script>
@@ -1878,7 +1881,11 @@ new MutationObserver(()=>{if(typesetPending)return;typesetPending=true;requestAn
 typeset(document.body);
 
 initStore();
-window.FiletOffline.start(message=>toast(message));
+window.FiletOffline.start(message=>toast(message),async()=>{
+  if(!saveDraft())return false;
+  await flushAllProgress();
+  return ![...posPending.values()].some(q=>q.inflight||q.failed) && Object.keys(LS.get('filet.pending.v1',{})).length===0;
+});
 })();
 </script>
 

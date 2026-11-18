@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Обновить — Филейный счётчик</title>
+<style>
+body{margin:0;background:#eae8e5;color:#1e1d1b;font:16px/1.5 system-ui,sans-serif}main{max-width:440px;margin:12vh auto;padding:24px}h1{font:400 30px/1.2 Georgia,serif}button,a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box;padding:10px 16px;border:0;border-radius:14px;font:inherit}button{background:#1e1d1b;color:white;cursor:pointer}button:disabled{opacity:.5}a{color:#726e68}#status{min-height:48px}
+</style>
+<main><h1>Свежая версия счётчика</h1><p>Обновим приложение. Твои схемы и прогресс останутся на месте.</p><p id="status" role="status">Нажми «Обновить», когда есть интернет.</p><button id="update">Обновить</button> <a href="./">Вернуться</a></main>
+<script src="scripts/update.js"></script>
+<script>
+const button=document.getElementById('update'),status=document.getElementById('status');
+button.onclick=async()=>{
+  button.disabled=true;status.textContent='Загружаем свежую версию…';
+  try{
+    if(!('serviceWorker' in navigator))throw Error('Открой счётчик в браузере с поддержкой обновлений.');
+    const registration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
+    await registration.update();
+    await FiletUpdate.waitForInstall(registration);
+    await FiletUpdate.activate(registration);
+    location.replace('./');
+  }catch(error){status.textContent=error.message;button.disabled=false;}
+};
+</script>
+</html>

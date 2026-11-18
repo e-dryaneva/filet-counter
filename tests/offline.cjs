@@ -12,7 +12,7 @@ function worker({failInstall = false} = {}) {
   const storage = new Map([[prefix + 'old', new Map()], ['another-app', new Map()]]);
   const handlers = {};
   const network = [];
-  let claimed = false;
+  let claimed = false, activatedByUser = false;
   const caches = {
     async open(name) {
       if (!storage.has(name)) storage.set(name, new Map());
@@ -33,6 +33,7 @@ function worker({failInstall = false} = {}) {
     fetch: async request => { network.push(request.url); return 'network'; },
     self: {
       registration: {scope},
+      async skipWaiting() { activatedByUser = true; },
       FILET_OFFLINE: {version: 'new', assets: ['index.html', 'styles/system.css', 'assets/fonts/font.ttf']},
       clients: {async claim() { claimed = true; }},
       addEventListener(type, handler) { handlers[type] = handler; }
@@ -48,7 +49,7 @@ function worker({failInstall = false} = {}) {
     handlers.fetch({request: {url, method, mode}, respondWith(value) { promise = value; }});
     return promise;
   };
-  return {scope, prefix, current, storage, network, lifecycle, request, claimed: () => claimed};
+  return {scope, prefix, current, storage, network, lifecycle, request, claimed: () => claimed, activatedByUser: () => activatedByUser, message: async type => { let promise; handlers.message({data:{type},waitUntil(value){promise=value;}});await promise; }};
 }
 
 (async () => {
@@ -56,6 +57,9 @@ function worker({failInstall = false} = {}) {
   await w.lifecycle('install');
   assert.equal(w.storage.get(w.current).size, 3, 'Every release asset is cached');
   assert(w.storage.has(w.prefix + 'old'), 'Installation keeps the active release');
+  assert(!w.activatedByUser(), 'Install does not interrupt knitting');
+  await w.message('unrelated');assert(!w.activatedByUser());
+  await w.message('FILET_ACTIVATE_UPDATE');assert(w.activatedByUser(), 'Explicit update activates the waiting release');
   await w.lifecycle('activate');
   assert(!w.storage.has(w.prefix + 'old'));
   assert(w.storage.has('another-app'), 'Unrelated application caches survive');

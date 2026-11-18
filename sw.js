@@ -24,6 +24,11 @@ self.addEventListener('install', event => {
   // A new release waits until all open app windows close; knitting is never reloaded.
 });
 
+// Activation is requested only by the explicit update button.
+self.addEventListener('message', event => {
+  if (event.data?.type === 'FILET_ACTIVATE_UPDATE') event.waitUntil(self.skipWaiting());
+});
+
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
