@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Филейный счётчик",
+  "short_name": "Мои схемы",
+  "lang": "ru",
+  "description": "Схемы и счётчик для филейного вязания, доступные без интернета.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EAE8E5",
+  "theme_color": "#EAE8E5",
+  "icons": [
+    {"src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

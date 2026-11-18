@@ -1,0 +1,43 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const Backup=require('../scripts/backup.js');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+const data=new Map(),patterns=new Map();let seq=0,failKey='';
+const storage={get:(k,f)=>structuredClone(data.get(k)??f),set:(k,v)=>{if(k===failKey)return false;data.set(k,structuredClone(v));return true;}};
+const original={id:'existing',name:'Своё',w:2,h:2,cells:['10','01'],pos:1};
+const backup={format:'filet-backup',version:1,exportedAt:'2026-11-01T10:00:00Z',patterns:[{id:'a',name:'Из копии',w:2,h:2,cells:['11','01'],pos:3,firstRtl:false}],activity:{days:{'2026-11-01':5}},pace:[{id:'a',ms:15000,to:3,at:Date.now()-5000,filled:true}],draft:{version:1,cols:2,rows:2,cells:['00','10'],name:'Черновик'}};
+const prepare=value=>Backup.prepare(JSON.stringify(value),{uid:()=>`restored-${++seq}`});
+(async()=>{
+ data.set('filet.patterns',{existing:original});patterns.set(original.id,original);
+ const plan=prepare(backup);assert.equal(patterns.size,1,'Preparing a file never writes anything');assert.equal(data.size,1);
+ assert.equal(plan.patterns[0].pos,3);assert.equal(plan.patterns[0].firstRtl,false);
+ await Backup.apply(plan,{storage,store:{kind:'local'},patterns});
+ assert.equal(patterns.size,2);assert.equal(data.get('filet.patterns')['restored-1'].cells[0],'11');assert.equal(data.get('filet.activity.v1').days['2026-11-01'],5);assert.equal(data.get('filet.pace.v1')[0].id,'restored-1');assert.equal(data.get('filet.drafts.v1')[0].editId,null);
+ data.get('filet.activity.v1').days['2026-11-01']=9;data.get('filet.drafts.v1')[0].name='Мой текущий черновик';
+ await Backup.apply(plan,{storage,store:{kind:'local'},patterns});
+ assert.equal(patterns.size,2,'Retry uses stable IDs');assert.equal(data.get('filet.pace.v1').length,1);assert.equal(data.get('filet.activity.v1').days['2026-11-01'],9);assert.equal(data.get('filet.drafts.v1')[0].name,'Мой текущий черновик');
+ assert.throws(()=>Backup.prepare('{bad',{uid:()=>''}),/прочитать/);
+ assert.throws(()=>prepare({format:'other'}),/не резервная/);assert.throws(()=>prepare({...backup,version:2}),/не поддерживается/);
+ for(const p of [{...backup.patterns[0],cells:['bad']},{...backup.patterns[0],pos:5}])assert.throws(()=>prepare({...backup,patterns:[p]}),/повреждены/);
+ assert.throws(()=>prepare({...backup,patterns:[backup.patterns[0],backup.patterns[0]]}),/повторяются/);
+ const retryPlan=prepare(backup);failKey='filet.patterns';await assert.rejects(Backup.apply(retryPlan,{storage,store:{kind:'local'},patterns}),/сохранить/);assert.equal(patterns.size,2);
+ failKey='filet.activity.v1';await assert.rejects(Backup.apply(retryPlan,{storage,store:{kind:'local'},patterns}),/Повторить/);assert.equal(patterns.size,3);
+ failKey='';await Backup.apply(retryPlan,{storage,store:{kind:'local'},patterns});assert.equal(patterns.size,3,'Partial failure retries without duplicating patterns');
+ const cloudPlan=prepare({...backup,patterns:[backup.patterns[0],{...backup.patterns[0],id:'b'}]}),cloudData=new Map();let failOnce=true;
+ const cloud={kind:'db',async save(p){if(p===cloudPlan.patterns[1]&&failOnce){failOnce=false;throw Error('offline');}cloudData.set(p.id,p);}};
+ await assert.rejects(Backup.apply(cloudPlan,{storage,store:cloud,patterns}),/offline/);await Backup.apply(cloudPlan,{storage,store:cloud,patterns});assert.equal(cloudData.size,2);
+ // Actual app handlers: choose -> review -> explicit confirm -> success, plus invalid/cancelled files.
+ const els=new Map();const $=id=>{if(!els.has(id))els.set(id,{hidden:false,disabled:false,value:'',textContent:'',dataset:{},children:[],listeners:{},focus(){},click(){this.onclick?.();},append(...items){this.children.push(...items);},replaceChildren(){this.children=[];},addEventListener(k,fn){this.listeners[k]=fn;},close(){this.open=false;this.listeners.close?.();}});return els.get(id);};
+ const c={Date,window:{FiletBackup:Backup},$,patterns,store:{kind:'local'},LS:storage,uid:()=>`ui-${++seq}`,menus:{closeAll(){}},UI:{openDialog:d=>d.open=true,setBusy:(b,busy)=>b.disabled=busy},document:{querySelector:()=>({}),createElement:()=>({textContent:''})},renderLibrary(){},switchLibrarySection(){},exportBackup(){}};
+ vm.createContext(c);vm.runInContext(source.slice(source.indexOf('function validPattern('),source.indexOf('/* ---------- storage ---------- */')),c);
+ $('restoreBackup').onclick();assert.equal($('restoreDialog').open,true);assert.equal($('restoreConfirm').hidden,true);
+ const choose=async text=>$('restorePatterns').onchange({target:{files:[{size:text.length,name:'filet.json',text:async()=>text}],value:'file'}});
+ const before=patterns.size;
+ await choose(JSON.stringify(backup));assert.equal(patterns.size,before);assert.equal($('restorePreview').hidden,false);assert.equal($('restoreConfirm').hidden,false);assert.equal($('restoreContents').children[1].textContent,'1');
+ $('closeRestore').onclick();assert.equal(patterns.size,before,'Closing the review makes no writes');
+ $('restoreBackup').onclick();await choose('{bad');assert.equal($('restoreError').hidden,false);assert.equal($('restoreConfirm').hidden,true);assert.equal(patterns.size,before);
+ await $('restorePatterns').onchange({target:{files:[],value:''}});assert.equal(patterns.size,before,'Cancelling native file picker is harmless');
+ await choose(JSON.stringify(backup));await $('restoreConfirm').onclick();assert.equal(patterns.size,before+1);assert.equal($('restoreDone').hidden,false);assert.equal($('restoreTitle').textContent,'Копия восстановлена');assert.equal($('closeRestore').disabled,false);
+ // Async read finishing after dismissal must not populate a later session.
+ $('restoreBackup').onclick();let finishRead;const pending=$('restorePatterns').onchange({target:{files:[{size:100,text:()=>new Promise(resolve=>finishRead=resolve)}],value:''}});$('closeRestore').onclick();$('restoreBackup').onclick();finishRead(JSON.stringify(backup));await pending;assert.equal($('restoreConfirm').hidden,true);assert.equal($('restoreChoose').disabled,false);
+ console.log('PASS: backup review/confirm/cancel/error/success, validation, preservation, quota/network retry without duplicates, stale file reads');
+})().catch(e=>{console.error(e);process.exitCode=1;});
