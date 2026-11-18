@@ -57,8 +57,8 @@ function worker({failInstall = false} = {}) {
   await w.lifecycle('install');
   assert.equal(w.storage.get(w.current).size, 3, 'Every release asset is cached');
   assert(w.storage.has(w.prefix + 'old'), 'Installation keeps the active release');
-  assert(!w.activatedByUser(), 'Install does not interrupt knitting');
-  await w.message('unrelated');assert(!w.activatedByUser());
+  assert(w.activatedByUser(), 'A complete release activates automatically');
+  await w.message('unrelated');
   await w.message('FILET_ACTIVATE_UPDATE');assert(w.activatedByUser(), 'Explicit update activates the waiting release');
   await w.lifecycle('activate');
   assert(!w.storage.has(w.prefix + 'old'));
@@ -79,5 +79,6 @@ function worker({failInstall = false} = {}) {
   await assert.rejects(failed.lifecycle('install'), /font failed/);
   assert(!failed.storage.has(failed.current), 'A partial release is discarded');
   assert(failed.storage.has(failed.prefix + 'old'), 'A failed update preserves the previous release');
+  assert(!failed.activatedByUser(), 'Partial releases never activate');
   console.log('Offline caching: install, update, scope isolation, navigation and assets passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

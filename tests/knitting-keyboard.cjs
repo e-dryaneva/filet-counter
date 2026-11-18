@@ -37,12 +37,13 @@ const $ = id => {
 };
 const document = {
   activeElement: null,
+  dispatchEvent: event => { handlers.get(event.type)?.(event); return true; },
   addEventListener: (type, listener) => handlers.set(type, listener),
   querySelector: selector => selector === 'dialog[open]' && modalOpen ? {} : null
 };
 const pattern = {id: 'one', w: 3, h: 2, cells: ['010', '101'], pos: 0, firstRtl: true};
 const context = {
-  $, document, Date, screen: 'lib', curId: null,
+  $, document, Date, Event, screen: 'lib', curId: null,
   patterns: new Map([[pattern.id, pattern]]),
   menus: {closeAll() {}}, LS: {set() {}}, window: {scrollTo() {}}, navigator: {},
   requestWake() {}, releaseWake() {}, renderLibrary() {},

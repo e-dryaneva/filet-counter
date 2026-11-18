@@ -20,11 +20,12 @@ self.addEventListener('install', event => {
       await caches.delete(cacheName);
       throw error;
     }
+    // Only complete releases activate. Open pages choose when it is safe to reload.
+    await self.skipWaiting();
   })());
-  // A new release waits until all open app windows close; knitting is never reloaded.
 });
 
-// Activation is requested only by the explicit update button.
+// Keep compatibility with the recovery page for older cached installations.
 self.addEventListener('message', event => {
   if (event.data?.type === 'FILET_ACTIVATE_UPDATE') event.waitUntil(self.skipWaiting());
 });
