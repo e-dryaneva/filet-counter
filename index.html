@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="styles/fonts.css">
 <link rel="stylesheet" href="styles/tokens.css?v=aeb7f523f0">
 <link rel="stylesheet" href="styles/components.css?v=729c374cb5">
-<link rel="stylesheet" href="styles/system.css?v=09b4afa170">
+<link rel="stylesheet" href="styles/system.css?v=a150fcf663">
 </head>
 <body>
 <section id="lib">
@@ -668,7 +668,7 @@ function bendClothPreview(cv,amount,edge=amount){
 }
 function attachClothHover(button,cv){
   let x=0,y=0,targetX=0,targetY=0,pending=false,lastTime=0;
-  const allowed=()=>matchMedia('(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference)').matches;
+  const allowed=()=>matchMedia('(prefers-reduced-motion:no-preference)').matches;
   const schedule=()=>{if(!pending){pending=true;requestAnimationFrame(frame);}};
   const frame=(time)=>{
     pending=false;if(!button.isConnected)return;
@@ -680,8 +680,8 @@ function attachClothHover(button,cv){
     if(Math.abs(targetX-x)>.008 || Math.abs(targetY-y)>.008)schedule();
     else{bendClothPreview(cv,targetX,targetY);lastTime=0;}
   };
-  button.onpointermove=e=>{
-    if(e.pointerType!=='mouse' || !allowed())return;
+  const followPointer=e=>{
+    if(!allowed() || (e.pointerType!=='mouse' && e.buttons===0))return;
     const rect=cv.getBoundingClientRect(),box=button.getBoundingClientRect();
     const pocket=button.querySelector('.pattern-pocket');
     const coveredTop=pocket?pocket.getBoundingClientRect().top:box.top+box.height*.56;
@@ -692,7 +692,10 @@ function attachClothHover(button,cv){
     const v=Math.max(0,Math.min(1,(e.clientY-rect.top)/(rect.height*.65)));
     targetX=(u-.5)*1.8;targetY=(.5-v)*1.7;schedule();
   };
-  button.onpointerleave=()=>{targetX=targetY=0;schedule();};
+  button.onpointermove=followPointer;
+  button.onpointerdown=followPointer;
+  const release=()=>{targetX=targetY=0;schedule();};
+  button.onpointerleave=release;button.onpointerup=release;button.onpointercancel=release;
 }
 let albumActiveId = null;
 let librarySection='home';
@@ -932,7 +935,7 @@ function renderActivityTracker(){
     const label=`${date.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}: ${n} ${plural(n,'клетка','клетки','клеток')}`;
     cell.setAttribute('aria-label',label);cell.disabled=date>today;
     const dayNumber=document.createElement('span');dayNumber.className='activity-date num';dayNumber.textContent=String(date.getDate());dayNumber.setAttribute('aria-hidden','true');cell.append(dayNumber);
-    if(n>0 && date<=today){const dot=document.createElement('span');dot.className='activity-dot';dot.setAttribute('aria-hidden','true');dot.style.width=Math.max(7,Math.sqrt(n/largestDay)*84)+'%';cell.append(dot);}
+    if(n>0 && date<=today){const dot=document.createElement('span');dot.className='activity-dot';dot.setAttribute('aria-hidden','true');dot.style.width=Math.max(7,Math.sqrt(n/largestDay)*58)+'%';cell.append(dot);}
     if(key===activityDateKey(today))cell.setAttribute('aria-current','date');
     cell.onclick=()=>showTooltip(cell,date,n);cell.onfocus=()=>showTooltip(cell,date,n);grid.append(cell);
   }
@@ -941,16 +944,20 @@ function renderActivityTracker(){
   legend.textContent='Чем больше круг, тем больше провязано за день';
   const insights=activityInsights(days,start,today);
   const analytics=document.createElement('aside');analytics.className='activity-analytics';
-  const sub=document.createElement('h3');sub.textContent='Твой темп';analytics.append(sub);
+  const sub=document.createElement('h3');sub.textContent='За последние 28 дней';analytics.append(sub);
   const pace=knittingPace();
+  const paceSummary=document.createElement('div');paceSummary.className='activity-pace';
+  const paceTitle=document.createElement('h3');paceTitle.textContent='Твой темп';
+  const paceValue=document.createElement('p'),paceNumber=document.createElement('strong'),paceLabel=document.createElement('span');
+  paceNumber.textContent=pace?String(Math.round(pace)):'—';paceLabel.textContent='клеток в час';paceValue.append(paceNumber,paceLabel);paceSummary.append(paceTitle,paceValue);
   const metricGrid=document.createElement('div');metricGrid.className='metric-grid';analytics.append(metricGrid);
-  for(const [value,label] of [[pace?Math.round(pace):'—','клеток в час'],[days[activityDateKey(today)]||0,'клеток сегодня'],[activeDays,'дней с вязанием'],[insights.best,'лучшая серия'],[insights.average,'клеток за активный день']]){
+  for(const [value,label] of [[days[activityDateKey(today)]||0,'клеток сегодня'],[activeDays,'дней с вязанием'],[insights.best,'лучшая серия'],[insights.average,'клеток за активный день']]){
     const item=document.createElement('p'),strong=document.createElement('strong'),caption=document.createElement('span');
-    strong.textContent=String(value);caption.textContent=label;item.append(strong,caption);if(!metricGrid.children.length)item.className='pace-primary';metricGrid.append(item);
+    strong.textContent=String(value);caption.textContent=label;item.append(strong,caption);metricGrid.append(item);
   }
 
   const body=document.createElement('div');body.className='activity-body';const calendarSide=document.createElement('div');calendarSide.append(calendar,legend);body.append(calendarSide,analytics);
-  root.append(head,body);
+  root.append(head,paceSummary,body);
 }
 const normalizePatternName = value => value.normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
 let libraryMotionObserver=null,cleanupLibraryScroll=null;
